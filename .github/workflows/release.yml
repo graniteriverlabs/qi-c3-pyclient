@@ -1,0 +1,51 @@
+# Builds the wheel when a v* tag is pushed and attaches it to the GitHub Release, so users can
+# pip install straight from the release URL.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      # The wheel takes its version from pyproject.toml, not from the tag, so tagging v1.2.3
+      # while pyproject says 1.2.4 would publish a wheel whose name contradicts its release.
+      # Fail loudly instead.
+      - name: Check the tag matches the package version
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version=$(python -c "import tomllib, pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version'])")
+          echo "tag=$tag  pyproject=$version"
+          if [ "$tag" != "$version" ]; then
+            echo "::error::Tag v$tag does not match pyproject.toml version $version"
+            exit 1
+          fi
+
+      - name: Build wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --wheel
+
+      - name: Check the package imports
+        run: |
+          python -m pip install (Get-ChildItem dist/*.whl).FullName
+          python -c "import grl_c3_client; print(grl_c3_client.__version__)"
+
+      - name: Attach wheel to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.whl
+          generate_release_notes: true
