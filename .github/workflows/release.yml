@@ -1,3 +1,4 @@
+
 # Builds the wheel when a v* tag is pushed and attaches it to the GitHub Release, so users can
 # pip install straight from the release URL.
 name: Release
