@@ -1,0 +1,11 @@
+{
+  "ReportConfigurationModel": {
+    "testlabmanager": "John Smith",
+    "testLab": "Wireless Power Testing Lab",
+    "testlablocation": "Building 4, Suite 300, Tech Park, Sunnyvale, CA",
+    "testEngineer": "Sarah Johnson",
+    "phonenumber": "+1-555-123-4567",
+    "email": "sjohnson@techwirelesslab.com",
+    "remarksComments": "Testing performed according to standard protocol v2.3. Environmental conditions: 22°C, 45% humidity."
+  }
+}

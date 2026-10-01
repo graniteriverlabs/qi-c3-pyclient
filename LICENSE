@@ -1,0 +1,504 @@
+GRL PLATFORM SOLUTIONS
+
+SOFTWARE END USER LICENSE AGREEMENT
+
+INSTALLATION NOTICE: THIS IS A CONTRACT. BEFORE YOU DOWNLOAD THE SOFTWARE
+AND/OR COMPLETE THE INSTALLATION PROCESS, CAREFULLY READ THIS SOFTWARE END
+USER LICENSE AGREEMENT ("EULA"). BY DOWNLOADING THE SOFTWARE AND/OR CLICKING
+THE APPLICABLE BUTTON TO COMPLETE THE INSTALLATION PROCESS, YOU CONSENT TO THE
+TERMS OF THIS EULA AND YOU AGREE TO BE BOUND BY THIS EULA. IF YOU DO NOT WISH
+TO BECOME A PARTY TO THIS EULA AND BE BOUND BY ALL OF ITS TERMS AND
+CONDITIONS, CLICK THE APPROPRIATE BUTTON TO CANCEL THE INSTALLATION PROCESS,
+AND DO NOT INSTALL OR USE THE SOFTWARE
+
+BY DOWNLOADING, INSTALLING, OR USING THE SOFTWARE, YOU AGREE TO THE TERMS OF
+THIS EULA ON YOUR OWN BEHALF AND, IF YOU ARE USING THE SOFTWARE WITHIN THE
+SCOPE OF YOUR EMPLOYMENT OR OTHER SERVICE RELATIONSHIP WITH AN ORGANIZATION,
+YOU ALSO AGREE TO THE TERMS OF THIS EULA ON BEHALF OF SUCH ORGANIATION AND YOU
+REPRESENT THAT YOU ARE AUTHORIZED TO BIND SUCH ORGANIZATION TO THIS EULA.
+
+This EULA may be part of a master purchase agreement, master services
+agreement, purchase order, or similar agreements or set of purchasing or
+ordering documents under which a client has purchased a license to use the
+SOFTWARE (as defined more fully below, the "Purchase Agreement"). This EULA
+governs use by Client and all entities and individuals to whom Client provides
+access to the SOFTWARE.
+
+1. Definitions. As used in this EULA, the following terms have the following
+   meanings:
+
+   A. "GRLPS" or "GRL Platform Solutions" Means Granite River Labs Asia
+      Pacific Solutions Pte. Ltd., a Singapore corporation 51 Goldhill Plaza,
+      #07-10/11, Singapore 308900 or its authorized distributor.
+
+   B. "Agreement" Means this EULA together with the Purchase Agreement, if
+      any, and any and all applicable Specific Product Addenda.
+
+   C. "Authorized User" means an individual that Client has authorized to use
+      the SOFTWARE on Client's behalf.
+
+   D. "Client" means the contracting party that has entered into a Purchase
+      Agreement with GRLPS or has otherwise purchased a license to the
+      SOFTWARE.
+
+   E. "Computer" or "computer" Refers to one computing device or, if the
+      SOFTWARE is being used in connection with a virtual machine, one virtual
+      machine on one computing device.
+
+   F. "EULA" or "End User License Agreement" means this Software End User
+      License Agreement.
+
+   G. "Purchase Agreement" means, a purchase agreement, licensing agreement,
+      accepted purchase order, or similar agreement(s) between Client and
+      GRLPS or between Client and GRLPS's authorized distributor under which a
+      Client has agreed to purchase a license to use SOFTWARE, which
+      agreement(s) and document(s) set forth the fees to be paid and license
+      type.
+
+   H. "Restricted License" Means a license that requires, or purports to
+      require, as a condition of use, modification, or distribution, that (i)
+      other software code incorporated into, derived from or distributed with
+      such software code be (A) disclosed or distributed in source code form;
+      (B) licensed for the purpose of making modifications or derivative
+      works; or (C) redistributable at no charge, or (ii) otherwise impose or
+      could impose any other material limitation, restriction, or condition on
+      the right or ability of GRLPS to distribute or license the SOFTWARE
+      under terms of its choice or to refuse to license or distribute the
+      SOFTWARE to any person at GRLPS's discretion.
+
+   I. "SOFTWARE" means the computer software produced by GRLPS that you have
+      acquired a license to use.
+
+   J. "Specific Product Addendum" Means an addendum to this EULA or addendum
+      to the Purchase Agreement that is identified as a GRL Platform Solutions
+      Software License Agreement Product Addendum. A Specific Product Addendum
+      contains terms and conditions which apply with respect to the specific
+      SOFTWARE product(s) identified in the Specific Product Addendum.
+
+   K. "You" and "you", regardless of capitalization, means all of the
+      following, unless the context indicates otherwise: (a) Client, (a) you,
+      the individual using the SOFTWARE, and (c) if you are using the SOFTWARE
+      within the scope of your employment or other service relationship with
+      an organization other than Client (e.g., with an organization that is a
+      subcontractor, service provider, or other sublicensee of Client), such
+      organization.
+
+2. Grant of License. In consideration of, and conditioned upon, Client's
+   payment of the applicable fees to GRLPS, GRLPS hereby grants you a limited,
+   non-exclusive right to use (in accordance with one of the license types
+   listed below) the SOFTWARE pursuant and subject at all times to the terms
+   and conditions of the Purchase Agreement and this EULA. Unless otherwise
+   provided in the Purchase Agreement, the applicable license type is an
+   Evaluation License as described in Section 2.C. below. The SOFTWARE is in
+   "use" when loaded into temporary memory (i.e., RAM) or installed into
+   permanent memory (e.g., hard disk, CD-ROM, DVD-ROM, network storage device,
+   or other storage device). Except as expressly authorized under this Section
+   2, floating, concurrent, or shared use is not permitted under this
+   Agreement unless it is expressly authorized in the applicable Purchase
+   Agreement. The specific use rights granted to Client are as follows and
+   depend upon the type of license you have acquired:
+
+   A. Named User License. If Client has acquired a Named User License, the
+      Client must designate in writing (through the GRLPS registration
+      process) one (1) of its employees to serve as the named Authorized User
+      for the license (the "Named User"). The SOFTWARE may be installed on up
+      to two computers in a single workplace of the designated Named User.
+      Only the designated Named User, however, may use or otherwise run the
+      SOFTWARE, and the SOFTWARE may not be run concurrently (i.e., it may
+      only be launched on one computer at a time). Client may convert a Named
+      User License to a Computer-Based License by paying the applicable fees
+      and amending Client's Purchase Agreement. In the case of a Named User
+      License, if any of the computers on which the SOFTWARE may be installed
+      is a laptop, notebook or similar portable computer, or, in the case of a
+      computer-based license, if the single computer is a laptop, notebook or
+      similar portable computer, you may use the SOFTWARE on the portable
+      computer while temporarily away from your workplace for the same purpose
+      permitted by this Agreement as you normally use the SOFTWARE on the
+      portable computer while in your workplace.
+
+   B. Computer-Based License If the Client has acquired a Computer-Based
+      License or converted a Named User License to a Computer-Based License as
+      described in Section 2.A., the SOFTWARE may only be installed and used
+      on one (1) computer in Client's workplace. Under a Computer-Based
+      License, while all of the SOFTWARE must be installed and used on the
+      same computer, there is no limitation on the number of Client's
+      employees that may access and use the SOFTWARE on such computer;
+      provided, however, that the SOFTWARE may not be run concurrently (i.e.,
+      only one instance of the SOFTWARE can be launched on one computer at a
+      time).
+
+   C. Evaluation License: Pre-Release Software. If you have acquired an
+      Evaluation License, you may install and permit your employees to use the
+      SOFTWARE on computers in your workplace for internal evaluation purposes
+      only. If the computers are laptop, notebook or similar portable
+      computers, you may use the SOFTWARE on the portable computers while
+      temporarily away from your workplace for internal evaluation purposes
+      only in the same manner as you would normally do so on the portable
+      computers while in your workplace. You will be deemed to have an
+      Evaluation License for all SOFTWARE that has been provided to you by
+      GRLPS and for which you do not have a written document from GRLPS or
+      Purchase Agreement expressly designating a different type of license
+      granted to you for the SOFTWARE. The Evaluation License is for your own
+      internal use only. You also agree to use reasonable efforts to provide
+      feedback to GRLPS regarding your use of the SOFTWARE, including promptly
+      reporting to GRLPS errors or bugs that you might find. You also
+      acknowledge and agree that the SOFTWARE IS EVALUATION ONLY AND/OR PRE-
+      RELEASE SOFTWARE. AS SUCH, THE SOFTWARE MAY NOT BE FULLY FUNCTIONAL AND
+      YOU ASSUME THE ENTIRE RISK AS TO THE RESULTS AND PERFORMANCE OF THE
+      SOFTWARE. GRLPS WILL NOT UPDATE THE SOFTWARE, NOR WILL GRLPS SUPPORT THE
+      SOFTWARE. THE SOFTWARE MAY CONTAIN CODE THAT WILL, AFTER A CERTAIN TIME
+      PERIOD, DEACTIVATE THE SOFTWARE AND RENDER THE SOFTWARE UNUSABLE.
+      ALTHOUGH THE SOFTWARE MAY WARN YOU OF THE TIME-FRAME IN WHICH IT WILL BE
+      DISABLED, YOU ACKNOWLEDGE AND AGREE THAT THE SOFTWARE MAY BE DEACTIVATED
+      OR RENDERED UNUSABLE WITH OR WITHOUT WARNING. Upon such deactivation,
+      this EULA and the license granted hereunder will be considered
+      terminated. Prior to deactivation of the SOFTWARE, you may contact GRLPS
+      to convert your Evaluation License for the SOFTWARE to a Named User
+      License or Computer Based License, under such terms, and to the extent,
+      if any, that GRLPS generally makes such licenses available for the
+      SOFTWARE, or such other license as GRLPS may (in its sole discretion)
+      permit by paying to GRLPS the applicable license fee and obtaining from
+      GRLPS the applicable authorization code(s). GRLPS may (in its sole
+      discretion and upon notice to you) terminate the Evaluation License at
+      any time, whereupon this EULA and the license granted hereunder will be
+      considered terminated.
+
+   D. Other License Types. The applicable Purchase Agreement may define a new
+      license type not listed above or may otherwise include customized terms
+      regarding the scope, usage rights, and restrictions that differ from
+      those described for the license types listed above.
+
+3. Third Party Contractors. A third party contractor that you have engaged may
+   (if you desire) access and use the SOFTWARE solely for the Client's
+   benefit; provided: (i) the contractor (or, if applicable, its employee)
+   shall be considered, as applicable, the Named User or an Authorized User
+   for purposes of the applicable license type, and all use by such contractor
+   shall be in accordance with the terms and conditions of this Agreement,
+   (ii) before accessing the SOFTWARE, the contractor agrees in writing that
+   (a) the SOFTWARE shall be used solely in accordance with the terms of this
+   Agreement and solely for your benefit and (b) the contractor shall be
+   liable to GRLPS for any breach by it of this Agreement, and (iii) you
+   hereby agree and acknowledge that you will also be liable for any and all
+   actions or omissions of the contractor with respect to the use of the
+   SOFTWARE, as if such actions or omissions were your own.
+
+4. License Term and Termination. This EULA shall continue for the duration of
+   the license term for the SOFTWARE specified in the Purchase Agreement or
+   until its earlier termination. This EULA shall automatically terminate upon
+   (i) expiration or termination of the Purchase Agreement for any reason or
+   (ii) failure by you to comply with the terms of this EULA. The Purchase
+   Agreement may specify other events of termination. Upon termination or
+   expiration of this EULA, regardless of the reason, the license grants
+   contained herein shall terminate and you must immediately cease all use of
+   the SOFTWARE, and immediately destroy all copies of the SOFTWARE, provided
+   however that you must deliver the SOFTWARE and all copies to GRLPS if GRLPS
+   has so demanded prior to such destruction. Any provisions of this EULA that
+   are intended to survive expiration or termination of this Agreement as
+   indicated by their express terms, nature, or context, including without
+   limitation Section 5 and Sections 9 through 13, inclusive, of this EULA,
+   shall survive any such expiration or termination.
+
+5. Restrictions.
+
+   A. You may not: (i) reverse engineer, decompile, or disassemble the
+      SOFTWARE, decode or otherwise attempt to derive or gain access to the
+      source code of the Software or any part thereof (except to the extent
+      such foregoing restriction is expressly prohibited by applicable law);
+      (ii) use the SOFTWARE to gain access to unencrypted data in a manner
+      that defeats the digital content protection provided in the SOFTWARE;
+      (iii) sub-license, lease, lend, or rent, distribute, publish, transfer
+      or otherwise make available the SOFTWARE or any features or
+      functionality of the SOFTWARE, to any third party for any reason,
+      whether or not over a network and whether or not on a hosted basis,
+      including in connection with the internet, web hosting, wide area
+      network (WAN), virtual private network (VPN), virtualization, time-
+      sharing, service bureau, software as a service, cloud or other
+      technology or service, except as expressly permitted by the applicable
+      Purchase Agreement; (iv) disclose in whole or in part, distribute in
+      whole or part, modify, or create derivatives of the SOFTWARE; (v)
+      distribute or publish applications created with the SOFTWARE except as
+      expressly permitted by the applicable Purchase Agreement; (vi) combine
+      the SOFTWARE or any part thereof with, or incorporate the SOFTWARE or
+      any part thereof in, any other software programs; (vii) take any action
+      that results in any of the SOFTWARE being subject to an Restricted
+      License; or (viii) directly or indirectly, export, re-export, download,
+      transmit, or ship the SOFTWARE in violation of Section 20.D. or
+      otherwise in violation of any applicable laws or regulations, including
+      those of the U.S., the European Union or the jurisdiction in which you
+      use or are downloading the SOFTWARE; or (ix) install or use the SOFTWARE
+      on a network storage device unless the applicable Purchase Agreement
+      expressly permits such installation and use; (x) use the SOFTWARE or its
+      output for purposes of competitive analysis of the SOFTWARE, the
+      development of a competing software product or service or any other
+      purpose that is to GRLPS's commercial disadvantage; or (xi) use the
+      SOFTWARE in, or in association with, the design, construction,
+      maintenance or operation of any hazardous or safety-critical
+      environments or systems.
+
+   B. All uses of the SOFTWARE shall be in accordance with the applicable
+      documentation that accompanies the SOFTWARE and not in any manner
+      intended to (or that) circumvents such documentation or the intent of
+      this Agreement. Except as expressly permitted in the Purchase Agreement
+      or in Section 2 of this EULA, under no circumstance is "floating,"
+      shared, or concurrent use permitted under this Agreement.
+
+   C. The use of the SOFTWARE is intended only for use with content owned by
+      the user, public domain content or content you otherwise have the legal
+      right to use. You agree that you shall only use the SOFTWARE and
+      documentation in a manner that complies with all applicable laws in the
+      jurisdictions in which you use the SOFTWARE and documentation, including
+      applicable restrictions concerning copyright and other intellectual
+      property rights. You may not use the SOFTWARE in an attempt to, or in
+      conjunction with, any device, program or service designed to, circumvent
+      technological measures employed to control access to, or the rights in,
+      a content file or other work protected by the copyright laws of any
+      jurisdiction.
+
+6. Transfer. If you have a Named User License, Computer-Based License, or such
+   transfer is otherwise expressly permitted by the Purchase Agreement, you
+   may transfer the SOFTWARE to a third party provided that you notify GRLPS
+   in writing of such transfer (including the name and location of such third
+   party), such third party accepts the terms and conditions of this
+   Agreement, and after such transfer, you do not retain any copies of the
+   SOFTWARE nor retain any of the written materials accompanying the SOFTWARE.
+   GRLPS may, in its discretion, charge you a fee for the transfer of the
+   SOFTWARE. Except as expressly permitted by this EULA and the Purchase
+   Agreement, the licenses granted under this Agreement are non-transferable
+   and you may not, without the prior written consent of GRLPS, distribute or
+   otherwise provide the SOFTWARE to any third party or to any of your sites
+   or facilities not expressly identified in the applicable documents from
+   GRLPS.
+
+7. Multiple Versions (CD-ROM/DVD-ROM Media). If the SOFTWARE is distributed on
+   a CD-ROM or DVD-ROM containing multiple versions of the SOFTWARE for use
+   with different operating systems, you may only use one version of the
+   SOFTWARE, unless the Purchase Agreement expressly permits use of more than
+   one version.
+
+8. Software/Hardware Key. If the SOFTWARE requires a software key code or a
+   hardware key, you acknowledge that the SOFTWARE will not function without a
+   certain unique software key code or hardware key. This software key code or
+   hardware key will be furnished to you by GRLPS and you agree that such
+   software key code and hardware key is to be used solely with the SOFTWARE
+   for which it is provided. While GRLPS may (in its sole discretion) provide
+   you with the applicable key prior to receipt from you of the applicable
+   license fees, you will remain obligated to pay such fees to GRLPS.
+
+9. Copyright; No Other Licenses. The SOFTWARE, and all copies of the SOFTWARE,
+   are owned by GRLPS or its suppliers and are protected by applicable
+   copyright and other intellectual property laws. The SOFTWARE, and copies
+   thereof, are licensed only, and are not sold or leased. Therefore, you must
+   treat the SOFTWARE like any other copyrighted material. You may, however,
+   (i) make a reasonable number of copies of the SOFTWARE solely for backup or
+   archival purposes and (ii) make a reasonable number of copies of the
+   documentation that accompanies the SOFTWARE solely for your internal use in
+   connection with your use of the SOFTWARE. In no event may you remove or
+   alter any copyright, patent, trademark, or other legal notices or
+   disclaimers that exist in the SOFTWARE. All rights not expressly granted to
+   you in this Agreement are reserved to GRLPS.
+
+10. Trademark Notice. GRLPS Platform Solutions is a trademark of GRLPS or its
+   affiliates. Further, all other product and company names mentioned herein
+   are (or may be) trademarks or trade names of their respective companies.
+
+11. Feedback. If you provide any feedback to GRLPS regarding GRLPS products or
+   services, including without limitation any suggested changes or
+   improvements to the SOFTWARE, such as suggestions for new features or
+   functionality (collectively, "Feedback"), you hereby grant to GRLPS a
+   worldwide, royalty-free, non-exclusive, perpetual, irrevocable, fully
+   transferable right and license to use, copy, modify, display, and
+   distribute such Feedback for any purpose and to incorporate such Feedback
+   into the SOFTWARE or into other GRLPS products or services.
+
+12. Warranty Disclaimer. SOFTWARE provided under an Evaluation License is
+   provided "as is" without warranty of any kind, express or implied. The
+   warranty for SOFTWARE provided under any other license type, if any, shall
+   be set forth in the applicable Purchase Agreement. EXCEPT AS EXPRESSLY SET
+   FORTH IN THE APPLICABLE PURCHASE AGREEMENT, NO WARRANTIES, EXPRESS OR
+   IMPLIED, BY OPERATION OF LAW OR OTHERWISE, ARE MADE WITH RESPECT TO THE
+   SOFTWARE, INCLUDING ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR
+   A PARTICULAR PURPOSE, OR NON-INFRINGEMENT. GRLPS EXPRESSLY DISCLAIMS ALL
+   REPRESENTATIONS AND WARRANTIES THAT MAY ARISE FROM USAGE OF TRADE OR COURSE
+   OF DEALING OR PERFORMANCE. GRLPS DOES NOT WARRANT, GUARANTEE, OR MAKE ANY
+   REPRESENTATIONS REGARDING THE USE OF OR THE RESULTS OF THE USE OF THE
+   SOFTWARE IN TERMS OF CORRECTNESS, ACCURACY, COMPATIBILITY, RELIABILITY, OR
+   OTHERWISE AND DOES NOT REPRESENT OR WARRANT THAT THE OPERATION OF THE
+   SOFTWARE WILL BE UNINTERUPTTED OR ERROR FREE OR THAT THE SOFTWARE WILL MEET
+   CLIENT'S REQUIREMENTS OR ACHIEVE ANY INTENDED RESULTS.
+
+13. Limitation of Liability. TO THE FULLEST EXTENT PERMITTED BY APPLICABLE
+   LAW, IN NO EVENT SHALL GRLPS OR ITS LICENSORS OR SUPPLIERS (INCLUDING THEIR
+   RESPECTIVE DIRECTORS, OFFICERS, EMPLOYEES, AND AGENTS) BE LIABLE TO CLIENT,
+   YOU, OR TO ANY PARTY FOR ANY LOSS OF USE, LOST REVENUE, LOST PROFITS, LOST
+   SAVINGS, BUSINESS INTERRUPTION, OR LOSS OF DATA OR BUSINESS INFORMATION OR
+   FOR LOSS OF ANY INDIRECT, INCIDENTAL, SPECIAL, PUNITIVE, EXEMPLARY, OR
+   CONSEQUENTIAL DAMAGES OF ANY KIND, WHETHER ARISING OUT OF BREACH OF
+   CONTRACT, TORT (INCLUDING NEGLIGENCE) OR OTHERWISE, REGARDLESS OF WHETHER
+   SUCH DAMAGE WAS FORESEEABLE AND WHETHER OR NOT SUCH PARTY HAS BEEN ADVISED
+   OF THE POSSIBILITY OF SUCH DAMAGES. FURTHERMORE, IN NO EVENT WILL THE
+   AGGREGATE LIABILITY OF GRLPS OR ITS LICENSORS OR SUPPLIERS (INCLUDING THEIR
+   RESPCTIVE DIRECTORS, OFFICERS, EMPLOYEES, AND AGENTS) ARISING OUT OF OR
+   RELATED TO THIS AGREEMENT OR THE SOFTWARE EXCEED THE AMOUNTS PAID OR
+   PAYABLE BY CLIENT FOR THE SOFTWARE THAT IS THE SUBJECT OF THE CLAIM. You
+   acknowledge that the applicable fees and prices reflect this allocation of
+   risk. Because some jurisdictions do not allow the exclusion or limitation
+   of liability for consequential or incidental damages, the above limitations
+   may not apply to you.
+
+14. No Liability Other than to Client. IN NO EVENT WILL GRLPS OR ITS
+   AFFILIATES, OR ANY OF ITS OR THEIR RESPECTIVE LICENSORS OR SERVICE
+   PROVIDERS, BE LIABLE TO ANY AUTHORIZED USER, ENTITY, OR PERSON OTHER THAN
+   CLIENT FOR (A) ANY USE, INTERRUPTION, DELAY OR INABILITY TO USE THE
+   SOFTWARE, OR (B) FOR ANY ERRORS, OMISSIONS, OR INACCURACIES IN ANY DATA,
+   REPORTS, OR OTHER OUTPUT GENERATED, ACCESSED, UPLOADED, COLLECTED, OR
+   PROVIDED TO, BY, OR THROUGH THE SOFTWARE. AUTHORIZED USERS ARE PROVIDED THE
+   SOFTWARE PURSUANT TO THE PURCHASE AGREEMENT BETWEEN GRLPS AND CLIENT,
+   SOLELY FOR THE BENEFIT OF CLIENT AND AT CLIENT'S DISCRETION. YOU, THE
+   AUTHORIZED USER, ACKNOWLEDGE THAT YOU HAVE NO RIGHTS UNDER THAT PURCHASE
+   AGREEMENT INCLUDING ANY RIGHTS TO ENFORCE ANY OF ITS TERMS. ANY OBLIGATION
+   OR LIABILITY OF GRLPS OR ITS AFFILIATES, OR ANY OF ITS OR THEIR LICENSORS
+   OR SERVICE PROVIDERS, MAY HAVE WITH RESPECT TO AN AUTHORIZED USER'S USE OR
+   INABILITY TO USE THE SOFTWARE OR ASSOCIATED DATA OR REPORTS SHALL BE SOLELY
+   TO CLIENT PURSUANT TO THE PURCHASE AGREEMENT AND SUBJECT TO ALL LIMITATIONS
+   OF LIABILITY, WARRANTY DISCLAIMERS, AND OTHER PROVISIONS SET FORTH HEREIN
+   AND THEREIN.
+
+15. Warning. (1) GRLPS PRODUCTS ARE NOT DESIGNED WITH COMPONENTS AND TESTING
+   FOR A LEVEL OF RELIABILITY SUITABLE FOR USE IN OR IN CONNECTION WITH
+   SURGICAL IMPLANTS OR AS CRITICAL COMPONENTS IN ANY LIFE SUPPORT SYSTEMS
+   WHOSE FAILURE TO PERFORM CAN REASONABLY BE EXPECTED TO CAUSE SIGNIFICANT
+   INJURY TO A HUMAN. (2) IN ANY APPLICATION, INCLUDING THE ABOVE, RELIABILITY
+   OF OPERATION OF THE SOFTWARE PRODUCTS CAN BE IMPAIRED BY ADVERSE FACTORS,
+   INCLUDING FLUCTUATIONS IN ELECTRICAL POWER SUPPLY, COMPUTER HARDWARE
+   MALFUNCTIONS, COMPUTER OPERATING SYSTEM SOFTWARE FITNESS, FITNESS OF
+   COMPILERS AND DEVELOPMENT SOFTWARE USED TO DEVELOP AN APPLICATION,
+   INSTALLATION ERRORS, SOFTWARE AND HARDWARE COMPATIBILITY PROBLEMS,
+   MALFUNCTIONS OR FAILURES OF ELECTRONIC MONITORING OR CONTROL DEVICES,
+   TRANSIENT FAILURES OF ELECTRONIC SYSTEMS (HARDWARE AND/OR SOFTWARE),
+   UNANTICIPATED USES OR MISUSES, OR ERRORS ON THE PART OF THE USER OR
+   APPLICATIONS DESIGNER (ADVERSE FACTORS SUCH AS THESE ARE HEREAFTER
+   COLLECTIVELY TERMED "SYSTEM FAILURES"). ANY APPLICATION WHERE A SYSTEM
+   FAILURE WOULD CREATE A RISK OF HARM TO PROPERTY OR PERSONS (INCLUDING THE
+   RISK OF BODILY INJURY AND DEATH) SHOULD NOT BE RELIANT SOLELY UPON ONE FORM
+   OF ELECTRONIC SYSTEM DUE TO THE RISK OF SYSTEM FAILURE. TO AVOID DAMAGE,
+   INJURY, OR DEATH, THE USER OR APPLICATION DESIGNER MUST TAKE REASONABLY
+   PRUDENT STEPS TO PROTECT AGAINST SYSTEM FAILURES, INCLUDING BACK-UP OR SHUT
+   DOWN MECHANISMS. BECAUSE EACH END-USER SYSTEM IS CUSTOMIZED AND DIFFERS
+   FROM GRLPS'S TESTING PLATFORMS AND BECAUSE A USER OR APPLICATION DESIGNER
+   MAY USE GRLPS PRODUCTS IN COMBINATION WITH OTHER PRODUCTS IN A MANNER NOT
+   EVALUATED OR CONTEMPLATED BY GRLPS, THE USER OR APPLICATION DESIGNER IS
+   ULTIMATELY RESPONSIBLE FOR VERIFYING AND VALIDATING THE SUITABILITY OF
+   GRLPS PRODUCTS WHENEVER GRLPS PRODUCTS ARE INCORPORATED IN A SYSTEM OR
+   APPLICATION, INCLUDING THE APPROPRIATE DESIGN, PROCESS, AND SAFETY LEVEL OF
+   SUCH SYSTEM OR APPLICATION.
+
+16. U.S. Government Rights. The SOFTWARE is a "commercial item" developed
+   exclusively at private expense, consisting of "commercial computer
+   software" and "commercial computer software documentation" as such terms
+   are defined or used in the applicable U.S. acquisition regulations. If you
+   are an agency, department, or other entity of the United States Government,
+   the SOFTWARE is licensed hereunder (i) only as a commercial item and (ii)
+   with only those rights as are granted to all other licensees pursuant to
+   the terms and conditions of this Agreement. You agree not to use,
+   duplicate, or disclose the SOFTWARE in any way not expressly permitted by
+   this Agreement. Nothing in this Agreement requires GRLPS to produce or
+   furnish technical data for or to you.
+
+17. Compliance.
+
+   A. You agree to make all applicable records available for review by GRLPS
+      during your normal business hours so as to permit GRLPS (upon reasonable
+      notice to you) to verify your compliance with the terms and conditions
+      of this Agreement. Further, if you are a business or other entity, you
+      agree that upon the request of GRLPS or GRLPS's authorized
+      representative, you will promptly document and certify in writing to
+      GRLPS that your and your employees' use of the SOFTWARE complies with
+      the terms and conditions of this Agreement. GRLPS may (upon written
+      notice) inspect your use of the SOFTWARE during your normal business
+      hours to ensure your compliance with this Agreement. If the results of
+      any such inspection indicate the underpayment by you of applicable fees
+      due and payable to GRLPS, you shall (i) immediately pay such amounts to
+      GRLPS; and (ii) reimburse GRLPS for the cost of such inspection.
+
+   B. You agree that the SOFTWARE may collect and communicate certain
+      software, hardware, and use information to GRLPS's (or its service
+      providers') servers for the purposes of (i) checking for and performing
+      any updates, (ii) ensuring that you have complied and are complying with
+      the terms and license conditions in this Agreement, including your use
+      of valid software key codes or hardware keys or both, and (iii) GRLPS's
+      internal product development. The information collected and communicated
+      does not include any proprietary application data. GRLPS will not
+      provide any of the information to any third party except as required (a)
+      by law or legal process, or (b) to enforce compliance with the terms and
+      license conditions in this Agreement, including your use of valid
+      software key codes or hardware keys or both.
+
+18. General.
+
+   A. This EULA is governed by the laws of the State of California, United
+      States, exclusive of any provisions of the United Nations Convention on
+      the International Sale of Goods, and without regard to principles of
+      conflicts of law; and the exclusive venue for all actions under this
+      EULA will be the courts located in the State of California, United
+      States.
+
+   B. This EULA along with the Purchase Agreement constitute the complete
+      agreement between you and GRLPS regarding the SOFTWARE and supersedes
+      any oral or written proposals, prior agreements, purchase orders, or any
+      other communication between you and GRLPS relating to the subject matter
+      of this Agreement. A waiver by GRLPS of any breach of any provision
+      hereof shall not be construed to be a waiver of any succeeding breach of
+      that provision or of any breach of any other provision. No modification
+      of this EULA shall be effective unless set forth in a writing signed by
+      a duly authorized representative of you and GRL. The word "including" as
+      used in this EULA shall be understood as meaning "including without
+      limitation".
+
+   C. If any action is brought by either party to this EULA against the other
+      regarding the subject matter hereof, the prevailing party shall be
+      entitled to recover, in addition to any relief granted, reasonable
+      attorney fees and court costs.
+
+   D. The SOFTWARE is, and any third party software provided by GRLPS with the
+      SOFTWARE may be, subject to control under the U.S. Export Administration
+      Regulations (15 CFR Part 730 et. seq.), other applicable U.S. export
+      control laws and regulations, and applicable global export control laws
+      and regulations, including, for products exported from the European
+      Union, the Council Regulation (EC) No. 428/2009 (the "Regulation") and
+      the Hungarian Government Decree No. 50/2004 (III. 23.). You agree that
+      you will not export, re-export or transfer any SOFTWARE or third party
+      software provided by GRLPS with the SOFTWARE via any means to any
+      prohibited destination, entity or individual without the required export
+      license(s) or authorization(s) from the U.S. Government and/or other
+      applicable export licensing authority. GRLPS reserves the right not to
+      ship or permit downloading of the SOFTWARE ordered if, at any time,
+      GRLPS believes that such shipment or downloading of such SOFTWARE or any
+      third party software provided by GRLPS with such SOFTWARE, may violate
+      U.S. and/or other applicable export control laws. If you are downloading
+      the SOFTWARE, you hereby represent and warrant to GRLPS as follows: (i)
+      you are not located in, or under the control of, any country the laws
+      and regulations of which prohibit importation of the SOFTWARE or any
+      third party software provided by GRLPS with the SOFTWARE; and (ii) you
+      are not located in, or under the control of, any country to which the
+      laws and regulations of the U.S. and/or other applicable export control
+      laws prohibit exportation of the SOFTWARE or any such third party
+      software.
+
+   E. The invalidity or unenforceability of any term of this EULA in any
+      situation in any jurisdiction shall not affect the validity or
+      enforceability of the remaining terms or the validity or enforceability
+      of such term in any other situation or in any other jurisdiction. If a
+      final judgment declares any term hereof to be invalid or unenforceable,
+      the court making the determination shall have the power to limit the
+      term, to delete specific words or phrases, or to replace it with a term
+      that is valid and enforceable and that comes closest to expressing the
+      intention of replaced term, and this EULA shall be enforceable as so
+      modified. However, in the event that such court declines to modify such
+      provisions, then the parties will in good faith negotiate a modification
+      to the provision to the minimum extent necessary to render it valid and
+      enforceable in conformity with the parties' intent as manifested herein.
+
+(c) 2013-2026 GRL Platform Solutions (Granite River Labs Asia Pacific
+Solutions Pte. Ltd.)
+
+All Rights Reserved.

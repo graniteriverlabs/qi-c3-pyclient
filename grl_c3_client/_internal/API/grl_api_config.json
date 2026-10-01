@@ -1,0 +1,125 @@
+{
+    "GetLatestFirmwareVersion": {
+        "method": "GET",
+        "service": "ConnectionSetup",
+        "endpoint": "LatestFirmwareVersion"
+    },
+    "GetLatestEloadVersion": {
+        "method": "GET",
+        "service": "ConnectionSetup",
+        "endpoint": "LatestEloadVersion"
+    },
+    "GetLatestShortFixtureVersion": {
+        "method": "GET",
+        "service": "ConnectionSetup",
+        "endpoint": "LatestShortFixtureVersion"
+    },
+    "ConnectToTestEquipment": {
+        "method": "GET",
+        "service": "ConnectionSetup",
+        "endpoint": "<ip_address>"
+    },
+    "GetSoftwareVersion": {
+        "method": "GET",
+        "service": "App",
+        "endpoint": "GetSoftwareVersion"
+    },
+    "GetMessageBox": {
+        "method": "GET",
+        "service": "App",
+        "endpoint": "GetMessageBox"
+    },
+    "GetTestCaseList": {
+        "method": "GET",
+        "service": "TestConfiguration",
+        "endpoint": "GetTestCaseList"
+    },
+    "GetTestCaseListByProfile": {
+        "method": "GET",
+        "service": "TestConfiguration",
+        "endpoint": "GetTestCaseList/{powerProfile}",
+        "note": "C3-TPR / TPT BPP-EPP populate this; the unparameterised route returns []."
+    },
+    "GetAppState": {
+        "method": "GET",
+        "service": "App",
+        "endpoint": "GetAppState"
+    },
+    "GetWebSocketSupport": {
+        "method": "GET",
+        "service": "App",
+        "endpoint": "GetWebSocketSupport",
+        "note": "Returns true if this app build serves live data over WebSocket. 404/false = REST-polling build."
+    },
+    "GetTestStatus": {
+        "method": "GET",
+        "service": "Results",
+        "endpoint": "GetTestStatus"
+    },
+    "PostForceStop": {
+        "method": "POST",
+        "service": "ConnectionSetup",
+        "endpoint": "ForceStopCurrentExecution"
+    },
+    "PostTestListToExecute": {
+        "method": "POST",
+        "service": "TestConfiguration",
+        "endpoint": "PostTestListToExecute/0/true"
+    },
+    "PutProjectFolder": {
+        "method": "PUT",
+        "service": "TestConfiguration",
+        "endpoint": "PutProjectFolder"
+    },
+    "PutVerifyEsdfData": {
+        "method": "PUT",
+        "service": "TestConfiguration",
+        "endpoint": "PutVerifyEsdfData"
+    },
+    "PutClearCapture": {
+        "method": "PUT",
+        "service": "Plot",
+        "endpoint": "PutClearCapture"
+    },
+    "GetProjectConfiguration": {
+        "method": "GET",
+        "service": "TestConfiguration",
+        "endpoint": "GetProjectConfiguration"
+    },
+    "PutOptimumCoilValues": {
+        "method": "PUT",
+        "service": "TestConfiguration",
+        "endpoint": "PutOptimumCoilValues"
+    },
+    "GetOptimumCoilValues": {
+        "method": "GET",
+        "service": "TestConfiguration",
+        "endpoint": "GetOptimumCoilValues"
+    },
+    "PutMessageBoxResponse": {
+        "method": "PUT",
+        "service": "App",
+        "endpoint": "PutMessageBoxResponse"
+    },
+    "PutCertificationFilterToggle": {
+        "method": "PUT",
+        "service": "TestConfiguration",
+        "endpoint": "PutCertificationFilterToggle/{state}",
+        "note": "state=true for BPP/EPP, false for MPP"
+    },
+    "GetSelectedQiSpecMode_MPP": {
+        "method": "GET",
+        "service": "CustomAPIConfiguration_MPPTPT",
+        "endpoint": "GetSelectedQiSpecMode_MPP"
+    },
+    "PutSelectedQiSpecMode_MPP": {
+        "method": "PUT",
+        "service": "CustomAPIConfiguration_MPPTPT",
+        "endpoint": "PutSelectedQiSpecMode_MPP"
+    },
+    "PostVerifyESDFJsonSign": {
+        "method": "POST",
+        "service": "ReportViewer",
+        "endpoint": "PostVerifyESDFJsonSign"
+    }
+}
