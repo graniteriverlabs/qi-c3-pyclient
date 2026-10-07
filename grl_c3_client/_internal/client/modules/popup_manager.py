@@ -70,8 +70,6 @@ class PopupManager:
             os.makedirs(popup_json_dir, exist_ok=True)
 
             # Log the paths for debugging
-            self.logger.debug(f"Script directory: {script_dir}")
-            self.logger.debug(f"Client directory: {client_dir}")
             self.logger.debug(f"Root directory: {root_dir}")
             self.logger.debug(f"Popup JSON directory: {popup_json_dir}")
 
