@@ -1,0 +1,25 @@
+{
+  "TesterConfigurationModel": {
+    "isOptimumCoilEnable": false,
+    "isCoilPlacePopupEnabled": true,
+    "ptmcCode": "0x010E",
+    "prmcCode": "",
+    "bdiValue": "",
+    "repCount": 0,
+    "kiActual_P1": 0,
+    "kiActual_P2": 0,
+    "prxCloakWaitTime": 2,
+    "referenceResonance": 50,
+    "referenceQuality": 10,
+    "batteryCharge": 0,
+    "mplaOffset": 0,
+    "notal": null,
+    "isDUTPopupEnabled": false,
+    "isEDSPopUpReq": false,
+    "kiActual_P3": 0,
+    "rpMode": 0,
+    "isSimpleMode": false,
+    "ambientTempCheck": true,
+    "is16bitRPForced": false
+  }
+}

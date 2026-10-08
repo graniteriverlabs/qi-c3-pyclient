@@ -7,12 +7,12 @@ name = "qi-c3-pyclient"
 version = "1.0.0"
 description = "GRL C3 automation client - drive the GRL wireless-charging C3 test applications from Python."
 readme = "README.md"
-# Kept in step with _MIN_PYTHON in grl_c3_client/__init__.py, so pip and the import-time check
+# Kept in step with _MIN_PYTHON in grlps_c3_client/__init__.py, so pip and the import-time check
 # agree. The wheel is pure Python, so one build covers every listed version.
 requires-python = ">=3.11"
 license = "LicenseRef-Proprietary"
 license-files = ["LICENSE"]
-authors = [{ name = "Granite River Labs" }]
+authors = [{ name = "GRL Platform Solutions" }]
 keywords = ["grl", "qi", "wireless-charging", "wpc", "c3", "mpp", "test-automation"]
 classifiers = [
     "Private :: Do Not Upload",
@@ -38,18 +38,18 @@ dependencies = [
 ]
 
 [project.scripts]
-c3-init = "grl_c3_client._bootstrap:main"
-c3-apps = "grl_c3_client._cli:apps"
-c3-testcases = "grl_c3_client._cli:testcases"
-c3-run = "grl_c3_client._cli:run"
-c3-exerciser = "grl_c3_client._cli:exerciser"
+c3-init = "grlps_c3_client._bootstrap:main"
+c3-apps = "grlps_c3_client._cli:apps"
+c3-testcases = "grlps_c3_client._cli:testcases"
+c3-run = "grlps_c3_client._cli:run"
+c3-exerciser = "grlps_c3_client._cli:exerciser"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["grl_c3_client*"]
+include = ["grlps_c3_client*"]
 
 [tool.setuptools.package-data]
-grl_c3_client = [
+grlps_c3_client = [
     "grl_config.json",
     "JSON_User_input/*/*",
     "JSON_User_input/*/*/*",

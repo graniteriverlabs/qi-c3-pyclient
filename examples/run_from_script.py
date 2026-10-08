@@ -8,7 +8,7 @@ file, so you can take this script and delete the arguments you do not need - the
 
 Compare with run_compliance.py, which supplies nothing and takes it all from the configuration.
 """
-from grl_c3_client import GRLApiClient, config_path
+from grlps_c3_client import GRLApiClient, config_path
 
 APPLICATION = "GRL-C3-MP-TPR"
 TESTER = None            # e.g. "192.0.2.77"; None uses the configured address

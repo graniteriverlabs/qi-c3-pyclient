@@ -8,7 +8,7 @@ Run it from a workspace created by c3-init, or set GRL_C3_PROJECT_ROOT to point 
 """
 import sys
 
-from grl_c3_client import GRLApiClient, config_path
+from grlps_c3_client import GRLApiClient, config_path
 
 
 def main():

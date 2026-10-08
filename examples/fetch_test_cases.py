@@ -10,7 +10,7 @@ import json
 import sys
 from pathlib import Path
 
-from grl_c3_client import GRLApiClient, config_path
+from grlps_c3_client import GRLApiClient, config_path
 
 
 def main():

@@ -8,7 +8,7 @@ anything is sent if no console is attached, because nothing could then end it.
 """
 import sys
 
-from grl_c3_client import GRLApiClient, config_path
+from grlps_c3_client import GRLApiClient, config_path
 
 
 def main():

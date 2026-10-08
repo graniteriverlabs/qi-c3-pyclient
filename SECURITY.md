@@ -2,13 +2,13 @@
 
 ## Reporting a vulnerability
 
-Please report security issues privately to Granite River Labs rather than opening a public
+Please report security issues privately to GRL Platform Solutions rather than opening a public
 issue. We will acknowledge your report and tell you what we intend to do about it.
 
 ## What this client handles
 
 The client talks to a GRL C3 application over HTTP on the local machine, and to a tester on
-your own network. It does not send anything to Granite River Labs.
+your own network. It does not send anything to GRL Platform Solutions.
 
 Two things worth knowing when you share files from a run:
 
