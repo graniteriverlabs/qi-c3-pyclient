@@ -17,7 +17,8 @@ DESCRIPTION_FILE = None  # e.g. "esdf/MyDevice.json"; None uses the configured o
 
 # The exact names must match what the description file makes applicable. Get them with
 # `c3-testcases`, or with get_testcases.main() in a script. A name that is not applicable is
-# dropped and named in the log rather than sent and silently ignored.
+# dropped and named in the log rather than sent and silently ignored. ["ALL"] runs every case the
+# description file allows; an empty list runs nothing.
 TEST_CASES = [
     "8.1.1 PTX.CPX.PNG.S01.EPT.001",
     "8.1.2 PTX.CPX.PNG.S01.EPT.002",
@@ -25,32 +26,21 @@ TEST_CASES = [
 
 
 def main():
-    client = GRLApiClient(str(config_path()), app=APPLICATION, ip_address=TESTER)
     try:
-        if not client.launch_app():
-            print("Could not start the application.")
-            return 1
+        with GRLApiClient(str(config_path()), app=APPLICATION, ip_address=TESTER) as client:
+            # One call does the rest: create the project, load the description file, sync the
+            # power profile, select these cases, submit them, run, and collect the report.
+            status = client.run_compliance(
+                project_name=PROJECT,
+                esdf=DESCRIPTION_FILE,
+                test_cases=TEST_CASES,
+            )
+    except RuntimeError as exc:          # the application did not start, or no tester
+        print(exc)
+        return 1
 
-        result = client.connect()
-        if "error" in result:
-            print("Tester not reachable:", result["error"])
-            return 1
-
-        info = result.get("success")
-        if isinstance(info, dict):
-            print("Tester {0}, firmware {1}".format(
-                info.get("testerStatus"), info.get("firmwareVersion")))
-
-        # One call does the rest: create the project, load the description file, sync the power
-        # profile, select these cases, submit them, run, and collect the report.
-        print(client.set_project(
-            project_name=PROJECT,
-            esdf=DESCRIPTION_FILE,
-            test_cases=TEST_CASES,
-        ))
-        return 0
-    finally:
-        client.disconnect()
+    print(status)
+    return 0 if status == ["Test Execution completed"] else 1
 
 
 if __name__ == "__main__":

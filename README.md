@@ -8,11 +8,8 @@ files — from the command line or from your own scripts.
 ```python
 from grlps_c3_client import GRLApiClient
 
-client = GRLApiClient()
-client.launch_app()
-client.connect()
-client.set_project()
-client.disconnect()
+with GRLApiClient() as client:        # starts the application and connects the tester
+    print(client.run_compliance())    # runs the cases selected in Manual_test_cases.json
 ```
 
 ## Contents
@@ -69,14 +66,25 @@ upgrading, which is how new settings reach an existing workspace. See
 
 #### 2. Set your tester address
 
-Open `grl_config.json` and replace the placeholder for the application you use:
+```powershell
+c3-init --tester 192.0.2.60
+```
+
+That writes the address for the selected application and changes nothing else. For another
+application add `--app`:
+
+```powershell
+c3-init --app GRL-C3-TPT-MPP --tester 192.0.2.61
+```
+
+Or edit `grl_config.json` yourself — it is the same setting:
 
 ```json
 "ip_address": "192.0.2.50"     →     "ip_address": "<your tester's address>"
 ```
 
-`192.0.2.50` is unroutable on purpose, so an unconfigured install fails immediately instead of
-reaching something real. Check `app_path` points at your installation while you are there.
+`192.0.2.50` is the placeholder `c3-init` ships. It is unroutable on purpose, so an unconfigured
+install fails immediately instead of reaching something real.
 
 #### 3. Check what is configured
 
@@ -85,17 +93,36 @@ c3-apps
 ```
 
 ```
-APPLICATION             PORT  TESTER           INPUTS     SEQUENCE   INSTALLED
-------------------------------------------------------------------------------
-* GRL-C3-MP-TPR         2002  192.0.2.50       9 file(s)  yes        yes
-  GRL-C3-TPT-BPP-EPP    2004  192.0.2.50       7 file(s)  yes        yes
-  GRL-C3-TPT-MPP        2004  192.0.2.50       7 file(s)  yes        yes
-  GRL-WP-TPR-C3         3003  192.0.2.50       6 file(s)  yes        yes
+Configuration  C:\benches\my-bench\grl_config.json
+
+   APPLICATION          PORT   TESTER       STATUS
+ * GRL-C3-MP-TPR        2002   192.0.2.60   select test cases
+   GRL-C3-TPT-BPP-EPP   2004   not set      set the tester address
+   GRL-C3-TPT-MPP       2004   not set      set the tester address
+   GRL-WP-TPR-C3        3003   not set      application not installed
+
+ * is used when --app is not given.
+
+GRL-C3-MP-TPR will use
+  Description file     esdf\MPP-25-esdf_20260901_153618.json
+  Test cases           none selected - add case names, or "ALL", to
+                       Test_Case_List_From_System\GRL-C3-MP-TPR\Manual_test_cases.json
+  Exerciser sequence   exerciser\ExerciserSequence-MPP25.json
 ```
 
-`*` marks the application the other commands use; change it with `Selected_app`. `INSTALLED` is
-whether `app_path` exists, `SEQUENCE` whether the configured exerciser file is present. It also
-lists the exerciser sequences each application has.
+`*` marks the application the other commands use; change it with `Selected_app`. STATUS is the
+first thing that would stop `c3-run`, checked without starting anything:
+
+| STATUS | Means |
+|---|---|
+| `application not installed` | nothing at that application's `app_path` |
+| `set the tester address` | `ip_address` is empty or still the placeholder |
+| `description file not found` | the file `EsdfConfigurationModel` names is not there |
+| `select test cases` | `Manual_test_cases.json` selects nothing |
+| `fix the test case selection` | `Manual_test_cases.json` cannot be read |
+| `ready` | `c3-run` can start |
+
+`c3-apps --app <name>` shows what another application will use.
 
 #### 4. Add your device description file
 
@@ -139,9 +166,21 @@ in it:
 ]
 ```
 
-Names must match the fetched list exactly — copy and paste them. Anything that does not match is
-skipped and named in the log. **While the file is empty, every applicable case is selected** — an
-empty selection means no choice has been made, not a choice of nothing.
+To run every case the description file allows, write:
+
+```json
+["ALL"]
+```
+
+| The file holds | `c3-run` |
+|---|---|
+| case names | runs the ones the description file allows; any it does not allow are named and skipped |
+| `["ALL"]` | runs every case the description file allows |
+| `[]`, nothing, or no file | **runs nothing**, and says which file to edit |
+| invalid JSON, or not a list | **runs nothing**, and says what is wrong |
+| `"ALL"` together with names | **runs nothing** — `"ALL"` must be the only entry |
+
+Names must match the fetched list exactly — copy and paste them. `"ALL"` is matched in any case.
 
 #### 7. Run
 
@@ -149,30 +188,48 @@ empty selection means no choice has been made, not a choice of nothing.
 c3-run
 ```
 
+It prints what it will use, then starts:
+
+```
+Compliance run   GRL-C3-MP-TPR
+  Tester             192.0.2.60
+  Description file   esdf\MPP-25-esdf_20260901_153618.json
+  Test cases         2 named in Manual_test_cases.json
+```
+
 Start the application → connect → create the project → load the description file → run the selected
 cases → collect the report → shut down.
+
+If something would stop the run — no tester address, a missing description file, nothing
+selected — every reason is printed under that summary and **nothing is started**.
 
 ## Running tests
 
 ### Commands
 
+Everything is set in the JSON files; the commands only run. The one exception is the tester
+address, which `c3-init` can set for you.
+
 | Command | Does |
 |---|---|
 | `c3-init` | create the workspace, or update an existing one after an upgrade |
 | | seeds the configuration, example inputs, the exerciser sequences, and an empty test-case selection |
-| `c3-apps` | list the configured applications and their settings |
+| `c3-apps` | each application and whether it is ready to run, then what the selected one will use |
 | `c3-testcases` | fetch the applicable test cases; runs no tests |
 | `c3-run` | run the selected test cases and collect the report |
 | `c3-exerciser` | run an exerciser session |
 
-Every command returns `0` on success and `1` on failure, so they drop straight into CI.
+`c3-run` and `c3-exerciser` print what they will use before they start, and start nothing when
+something would stop them. Every command returns `0` on success and `1` on failure — for `c3-run`,
+`0` means every selected case ran — so they drop straight into CI.
 
-Every command except `c3-init` also takes these two options:
-
-| Option | Does |
-|---|---|
-| `--app NAME` | use this application for this run, instead of `Selected_app` |
-| `--config PATH` | use this configuration file, instead of the one in the workspace |
+| Command | Option | Does |
+|---|---|---|
+| `c3-init` | `--tester ADDRESS` | write the tester address; nothing else in the configuration changes |
+| | `--app NAME` | the application `--tester` is for, instead of `Selected_app` |
+| | `--force` | reset to this version's defaults, after backing your configuration up |
+| every other command | `--app NAME` | use this application for this run, instead of `Selected_app` |
+| | `--config PATH` | use this configuration file, instead of the one in the workspace |
 
 ### Where your results are
 
@@ -218,8 +275,8 @@ application you are driving:
 }
 ```
 
-`c3-apps` prints the address each application will use. See
-[Set your tester address](#2-set-your-tester-address).
+`c3-init --tester <address>` writes it for you. `c3-apps` prints the address each application will
+use. See [Set your tester address](#2-set-your-tester-address).
 
 ### Working with more than one application
 
@@ -258,7 +315,8 @@ The exerciser drives the emulator directly instead of running compliance cases.
 **One sequence file.** It holds the packet sequence, controller settings and phase timings, and
 comes from the application's own UI export — nothing is typed into this client.
 
-A sequence is tied to **one power profile**, so `c3-init` seeds one per profile per application:
+A sequence is tied to **one power profile**, so `c3-init` seeds one per profile per application,
+in that application's `exerciser\` folder:
 
 | Application | Sequences |
 |---|---|
@@ -267,30 +325,14 @@ A sequence is tied to **one power profile**, so `c3-init` seeds one per profile 
 | `GRL-C3-TPT-BPP-EPP` | BPP, EPP |
 | `GRL-WP-TPR-C3` | one sequence, which the export does not tie to a profile |
 
-Pick one for a session by the profile it is for:
-
-```powershell
-c3-exerciser --sequence MPP15
-```
-
-`c3-apps` lists them and marks the one used when `--sequence` is not given:
-
-```
-Exerciser sequences available, per application (c3-exerciser --sequence <profile>):
-  GRL-C3-MP-TPR          APP15, APP25, MPP15, MPP25 (in use)
-  GRL-C3-TPT-BPP-EPP     BPP (in use), EPP
-```
-
-To make a profile the default, name its file in `grl_config.json` under that application's
-`files` block:
+Choose one in `grl_config.json`, under that application's `files` block:
 
 ```json
-"ExerciserSequenceModel": "ExerciserSequence-MPP15.json"
+"ExerciserSequenceModel": "exerciser/ExerciserSequence-MPP15.json"
 ```
 
 **To use a sequence of your own**, export it from the application's UI into
-`JSON_User_input\<application>\`, then name it in the configuration or pass it to `--sequence`.
-Anything named `ExerciserSequence*.json` is listed by `c3-apps` with the shipped ones.
+`JSON_User_input\<application>\exerciser\` and name it there the same way.
 
 You do **not** need to touch `run_mode`: `c3-run` always runs test cases and `c3-exerciser` always
 runs a session, whatever the configuration was last left set to.
@@ -301,20 +343,37 @@ runs a session, whatever the configuration was last left set to.
 c3-exerciser
 ```
 
-A missing or unnamed sequence file stops the command **before** the application starts, naming the
-path it looked for.
+It prints what the sequence does before anything starts:
+
+```
+Exerciser session   GRL-C3-TPT-MPP
+  Tester             192.0.2.61
+  Sequence           exerciser\ExerciserSequence-MPP25.json
+  Qi specification   2.3.1
+  Power profile      MPP25
+  Packets            26, in 2 sequences (11 and 15)
+  Steps              13 - reset, 9 controller settings, phases, packets, start
+  Not applied        gainConfig - this application cannot apply it
+  Ends               when you press Enter
+```
+
+`Not applied` lists settings in the file the application has no endpoint for. A missing or unnamed
+sequence file stops the command **before** the application starts, and lists the sequences that are
+there.
 
 A session runs until you press **Enter**; Ctrl+C also stops it cleanly. Either way the emulation is
 stopped and the capture collected. Since it waits for a keypress, a session is **refused before
-anything is sent when no console is attached** — run it from a terminal, not a scheduled task.
+anything starts when no console is attached** — a scheduled task, or input redirected from `NUL`.
+To run one unattended, use the Python API with a time limit:
+[An exerciser session from a script](#an-exerciser-session-from-a-script).
 
-To check your setup without touching the hardware:
+To check your setup without sending anything to the tester, set this in `grl_config.json`:
 
-```powershell
-c3-exerciser --dry-run
+```json
+"common": { "exerciser": { "dry_run": true } }
 ```
 
-That composes every request and sends none.
+That composes every request and sends none. Set it back to `false` for a real session.
 
 ### What you will see
 
@@ -349,49 +408,67 @@ Two ways to work, and they mix freely:
 |---|---|---|
 | Application | `GRLApiClient(app=...)` | `Selected_app` |
 | Tester address | `GRLApiClient(ip_address=...)` | that application's `ip_address` |
-| Project name | `set_project(project_name=...)` | `ProjectConfigurationModel` |
-| Description file | `set_project(esdf=...)` | `files.EsdfConfigurationModel` |
-| Test cases | `set_project(test_cases=[...])` | `Manual_test_cases.json`, or every applicable case |
+| Project name | `run_compliance(project_name=...)` | `ProjectConfigurationModel` |
+| Description file | `run_compliance(esdf=...)` | `files.EsdfConfigurationModel` |
+| Test cases | `run_compliance(test_cases=[...])`, or `["ALL"]` | `Manual_test_cases.json` |
 | Exerciser sequence | `run_exerciser(sequence_file=...)` | `files.ExerciserSequenceModel` |
+| Dry run | `run_exerciser(dry_run=True)` | `common.exerciser.dry_run` |
+| Session length | `run_exerciser(hold=60)` | until Enter is pressed |
+
+Test cases follow the same rules as the file: `["ALL"]` runs every case the description file
+allows, and an empty list runs nothing.
 
 ### A compliance run from a script
 
 ```python
 from grlps_c3_client import GRLApiClient
 
-client = GRLApiClient(
+with GRLApiClient(
     app="GRL-C3-MP-TPR",          # omit to use Selected_app
     ip_address="192.0.2.77",      # omit to use the configured address
-)
-try:
-    if not client.launch_app():
-        raise SystemExit("could not start the application")
-
-    result = client.connect()
-    if "error" in result:
-        raise SystemExit("tester not reachable: {0}".format(result["error"]))
-
-    print(client.set_project(
+) as client:
+    print(client.run_compliance(
         project_name="MyProject",
         esdf="esdf/MyDevice.json",
         test_cases=["8.1.1 PTX.CPX.PNG.S01.EPT.001"],
     ))
+```
+
+Entering the `with` block starts the application and connects the tester; if either fails it
+raises `RuntimeError` saying why, and the block does not run. Leaving it — normally or through an
+exception — disconnects and closes the application.
+
+The same steps one at a time, for a script that wants them separately:
+
+```python
+client = GRLApiClient(app="GRL-C3-MP-TPR")
+try:
+    if not client.launch_app():
+        raise SystemExit("could not start the application")
+    result = client.connect()
+    if not result.get("success"):
+        raise SystemExit("tester not reachable: {0}".format(result["error"]))
+    print(client.run_compliance(test_cases=["ALL"]))
 finally:
     client.disconnect()               # also closes the application
 ```
 
-`set_project` does the whole run: create the project, load the description file, sync the power
-profile, select the cases, submit, run, collect the report. It returns one of:
+`run_compliance` does the whole run: create the project, load the description file, sync the power
+profile, select the cases, submit, run, collect the report. `set_project` is the same call under its
+earlier name. It returns one of:
 
 | Return | Means |
 |---|---|
 | `["Test Execution completed"]` | every selected case reached a verdict |
 | `["Test Execution INCOMPLETE: N of M ..."]` | stopped early; the unfinished cases are named in the log |
-| `["Test Execution did not start: ..."]` | refused before anything ran — description file, profile, or licence |
+| `["Test Execution did not start: ..."]` | refused before anything ran — description file, profile, licence, or no allowed case selected |
+| `["No test cases selected for ..."]` | the selection was empty; nothing was sent to the application |
+| `["The test case selection for ... cannot be used ..."]` | the selection could not be read; nothing was sent |
+| `["esdf cannot be used for ..."]` | `is_multiple_esdf_files` is on, so one file or list passed for a run has nowhere to apply |
 | `["Test Execution failed: ..."]` | the application rejected the submitted list |
 
-**Check each step's result rather than assuming it worked**, and check for `"completed"` rather
-than for a non-empty list — a refusal is never a completion.
+**Check each step's result rather than assuming it worked.** Only
+`["Test Execution completed"]` means the run finished — a refusal is never a completion.
 
 **Names must match what the description file makes applicable.** One that does not is dropped and
 named in the log, so a typo costs one case, not the run. Get exact names with:
@@ -402,24 +479,30 @@ from grlps_c3_client import get_testcases
 print(get_testcases.main(app="GRL-C3-MP-TPR")["cases"])
 ```
 
-`test_cases=[]` selects nothing and runs nothing. Asking for no cases is not asking for all.
-
 ### An exerciser session from a script
 
-Same opening and closing; the one call differs:
+Same opening and closing; the one call differs. A script has nobody to press Enter, so give the
+session a length:
 
 ```python
-outcome = client.run_exerciser(
-    sequence_file="ExerciserSequence-MPP15.json",   # omit to use the configured one
-    dry_run=False,
-)
+with GRLApiClient(app="GRL-C3-MP-TPR") as client:
+    outcome = client.run_exerciser(
+        sequence_file="exerciser/ExerciserSequence-MPP15.json",   # omit to use the configured one
+        hold=60,                                                  # seconds, then it stops
+    )
+print("ok:", outcome["success"])
 print("capture:", (outcome.get("capture") or {}).get("copied_to"))
 ```
+
+The session stops itself after `hold` seconds, and that counts as success; the exerciser is always
+stopped and the capture collected. Pressing Enter in a console ends it sooner. Without `hold`, a
+script with no console is refused before anything starts.
 
 ### A whole run in one call
 
 `sample_run` takes the same inputs and is what the commands themselves use, so a script gets the
-same reporting `c3-run` prints. With no arguments it is the configuration-based run.
+same summary and the same refusals `c3-run` prints. With no arguments it is the
+configuration-based run.
 
 ```python
 from grlps_c3_client import sample_run
@@ -457,6 +540,11 @@ Added 2 setting(s) new in this version:
 **Nothing you have set is changed** — only missing keys are added, and missing files are put
 back. With nothing to do it prints nothing.
 
+A workspace laid out by an earlier version is brought up to date too: exerciser sequences that sit
+loose beside the configuration files are moved into their application's `exerciser\` folder, and a
+setting that names a moved file is updated, after backing the configuration up. Each move is
+reported; nothing is deleted.
+
 To start over with this version's defaults instead:
 
 ```powershell
@@ -477,15 +565,15 @@ your-bench-folder\
 ├── JSON_User_input\
 │   └── <application>\                   one folder per application
 │       ├── esdf\                        put your description files here
+│       ├── exerciser\                   one exerciser sequence per power profile
 │       ├── project_config.json
 │       ├── tester_config.json
 │       ├── report_config.json
-│       ├── OptimumCoilValue*            optimum coil values
-│       └── ExerciserSequence*.json      one exerciser sequence per power profile
+│       └── OptimumCoilValue*            optimum coil values
 ├── Test_Case_List_From_System\
 │   └── <application>\
 │       ├── Received_test_cases.json     generated: every applicable case
-│       ├── Manual_test_cases.json       yours: which of them to run (created empty)
+│       ├── Manual_test_cases.json       yours: which of them to run, or ["ALL"] (created empty)
 │       └── selected_test_cases.json     generated: what was actually selected
 ├── Run_time_files\<application>\        generated: what the application reported back
 ├── Runtime_Capture\<application>\       generated: the application's own reports, per run
@@ -511,8 +599,26 @@ Importing the library never creates files — only `c3-init` writes anything.
 
 ### Troubleshooting
 
-**`ACTION REQUIRED: ... ip_address is still the placeholder`**
-Step 2 has not been done. A script that passes `ip_address` does not need the configured value.
+**`ACTION REQUIRED: ... ip_address is still the placeholder`**, **`No tester address is set for ...`**
+Step 2 has not been done: run `c3-init --tester <address>`, adding `--app <name>` for an
+application other than the selected one. A script that passes `ip_address` does not need the
+configured value.
+
+**`No test cases selected for ...`**
+`Manual_test_cases.json` for that application is empty — which is how `c3-init` creates it. Put
+case names in it, or `["ALL"]` for every case the description file allows. Nothing was started.
+
+**`The test case selection for ... cannot be used`**
+The message names the file and what is wrong with it, for example the line of a JSON error, or
+`"ALL"` given together with case names. Nothing was started.
+
+**`This session runs until you press Enter, but no console is attached to read it`**
+`c3-exerciser` was run where nobody can press Enter — a scheduled task, or input redirected from
+`NUL`. Run it from a terminal, or from Python with `run_exerciser(hold=SECONDS)`.
+
+**`Test Execution did not start: none of the ... selected test case(s) is allowed by ...`**
+The names are not cases the description file allows. Refresh the list with `c3-testcases` and copy
+the names verbatim, or use `["ALL"]`.
 
 **`RuntimeError` about Windows or the Python version at import**
 The client requires Windows and CPython 3.11 or newer. Check with `python -V`.
@@ -527,11 +633,11 @@ Your Python is older than 3.11. The package declares `requires-python = ">=3.11"
 The default path resolves against the directory you are in. Run from your workspace, or pass an
 absolute path.
 
-**`The exerciser sequence configured for ... is missing`**
-`c3-apps` lists what each application has; pass one to `--sequence` or name it under
-`files.ExerciserSequenceModel`. One per profile is seeded, so this usually means the file was moved
-— `c3-init` puts it back. For a profile that is not seeded, export it from the application's UI
-into `JSON_User_input\<application>\`.
+**`The exerciser sequence for ... is missing`**
+The message lists the sequences that are there; point `files.ExerciserSequenceModel` at one of them.
+One per profile is seeded, so this usually means the file was moved — `c3-init` puts it back. For a
+profile that is not seeded, export it from the application's UI into
+`JSON_User_input\<application>\`.
 
 **The application does not start**
 Check `app_path` for that application, and that the C3 software runs on its own. Close any copy

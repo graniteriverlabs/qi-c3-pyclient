@@ -255,8 +255,54 @@ class GRLApiClient:
 
         self.logger.info(f"✅ Live data transport: {self.live_transport.name}")
 
+    # ---------------------------------------------------------------------------
+    # SECTION: The tester, and the runs
+    # ---------------------------------------------------------------------------
+    #
+    # Defined here rather than reached through `__getattr__`, so `help()`, `dir()`, editor
+    # autocomplete and type checkers can see them. Every argument overrides the configuration for
+    # this call only; leave one out and the configured value is used.
+
+    def connect(self, ip_address: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Connect the application to the tester.
+
+        Args:
+            ip_address: the tester to connect to. None -> the address this client was built with,
+                which is `ip_address` from the configuration unless the constructor was given one.
+
+        Returns:
+            ``{"success": True, "data": ...}`` once the application reports the tester connected,
+            or ``{"success": False, "error": "..."}``.
+        """
+        return self.legacy.connect(ip_address)
+
+    def run_compliance(self, project_name: Optional[str] = None, esdf: Optional[str] = None,
+                       test_cases: Optional[List[str]] = None) -> List[str]:
+        """
+        Create the project, load the description file and run the selected cases.
+
+        Args:
+            project_name: None -> `ProjectConfigurationModel`.
+            esdf: description file, relative to this application's input folder, for example
+                "esdf/MyDevice.json". None -> `files.EsdfConfigurationModel`.
+            test_cases: case names, or ["ALL"] for every case the description file allows.
+                None -> `Manual_test_cases.json`. An empty selection runs nothing.
+
+        Returns:
+            One status line. ``["Test Execution completed"]`` is the only one that means every
+            selected case ran; anything else says why the run did not finish.
+        """
+        return self.legacy.set_project(project_name, esdf=esdf, test_cases=test_cases)
+
+    def set_project(self, project_name: Optional[str] = None, esdf: Optional[str] = None,
+                    test_cases: Optional[List[str]] = None) -> List[str]:
+        """The same call as `run_compliance`, under its earlier name: it runs the tests too."""
+        return self.run_compliance(project_name, esdf=esdf, test_cases=test_cases)
+
     def run_exerciser(self, sequence_file: Optional[str] = None,
-                      dry_run: Optional[bool] = None) -> Dict[str, Any]:
+                      dry_run: Optional[bool] = None,
+                      hold: Optional[float] = None) -> Dict[str, Any]:
         """
         Run a license-gated exerciser session (the `run_mode == "exerciser"` path).
 
@@ -264,6 +310,9 @@ class GRLApiClient:
             sequence_file: the exported sequence to use, relative to this application's input
                 folder. None -> `files.ExerciserSequenceModel` from the configuration.
             dry_run: compose every request and send none. None -> `common.exerciser.dry_run`.
+            hold: seconds the exerciser runs before the session stops by itself. None -> it runs
+                until Enter is pressed, which needs a console; a script with none passes this.
+                Reaching the limit is a successful end. The exerciser is always stopped.
 
 
         One input file, mirroring how a compliance run takes an ESDF: the app's **exported
@@ -310,6 +359,8 @@ class GRLApiClient:
 
         if dry_run is not None:
             session["dry_run"] = bool(dry_run)
+        if hold is not None:
+            session["hold_seconds"] = hold
 
         # A caller-supplied sequence wins over the configured one, for this run only.
         seq_name = sequence_file or file_map.get("ExerciserSequenceModel")
@@ -317,7 +368,8 @@ class GRLApiClient:
             self.logger.error(f"No 'ExerciserSequenceModel' configured for {app} — the exported "
                               f"sequence file is what supplies the packets and settings")
             return {"success": False, "error": "no exerciser sequence file configured"}
-        seq_path = os.path.join(user_dir, seq_name)
+        # Resolved the way the pre-flight resolves it, so both read the same file.
+        seq_path = seq.sequence_path(user_dir, seq_name)
         try:
             doc = seq.load_sequence_file(seq_path)
             steps, problems = seq.build_steps(doc, ex.variant, session.get("steps"))
@@ -580,11 +632,27 @@ class GRLApiClient:
 
     def __enter__(self):
         """
-        Context manager entry.
+        Start the application and connect the tester, so the block can run straight away::
+
+            with GRLApiClient(app="GRL-C3-MP-TPR", ip_address="192.0.2.60") as client:
+                client.run_compliance(test_cases=["ALL"])
+
+        Leaving the block - normally or through an exception - disconnects and closes the
+        application. If either step fails here, everything is closed again and RuntimeError says
+        why, so a script never carries on with half a session.
 
         Returns:
             GRLApiClient: Self for use in with statement
         """
+        if not self.launch_app():
+            self.disconnect()
+            raise RuntimeError("The application did not start. The reason is in the log: "
+                               "{0}".format(os.path.abspath(self.config.log_manager.log_filename)))
+        result = self.connect()
+        if not result.get("success"):
+            self.disconnect()
+            raise RuntimeError("The tester was not connected: {0}".format(
+                result.get("error", "no reason given")))
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

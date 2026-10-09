@@ -8,6 +8,7 @@ import os
 from typing import List, Dict, Any
 
 from API import ApiName
+from . import case_selection
 
 
 class TestCaseManager:
@@ -24,6 +25,8 @@ class TestCaseManager:
         self.logger = logger
         self.api_handler = None
         self.is_test_list_with_project_name = False
+        #: Why the last selection left nothing to run; empty when something will.
+        self.last_problem = ""
 
     def set_api_handler(self, api_handler):
         """Set the API handler instance."""
@@ -214,15 +217,25 @@ class TestCaseManager:
     def _create_selected_test_cases_json(self, json_file_path: str,
                                          test_cases: List[str] = None) -> List[str]:
         """
-        Process a JSON file to extract enabled keys and save the results.
+        Record what the description file allows, then pick out what was asked for.
+
+        Every case the description file allows goes to ``Received_test_cases.json`` whatever is
+        selected - ``c3-testcases`` reads it to show the user what they can choose from. The cases
+        that will run go to ``selected_test_cases.json``.
+
+        What was asked for follows ``case_selection``: ``test_cases`` when given, else
+        ``Manual_test_cases.json``. Names are kept only if the description file allows them,
+        ``["ALL"]`` takes every allowed case, and an empty or unusable selection takes none.
+        When nothing is left to run, ``last_problem`` says why.
 
         Args:
-            json_file_path: Full path to the JSON file to process
+            json_file_path: the case tree the application returned for this project
             test_cases: cases supplied by the caller, used instead of `Manual_test_cases.json`
 
         Returns:
-            List of enabled test case keys (empty if operation failed)
+            The cases to run, in the order asked for; empty when there are none.
         """
+        self.last_problem = ""
         try:
             if not os.path.exists(json_file_path):
                 self.logger.error(f"File not found: {json_file_path}")
@@ -232,67 +245,45 @@ class TestCaseManager:
                 json_data = json.load(file)
 
             enabled_keys = self._extract_enabled_keys_from_json(json_data)
-
-            # A caller-supplied list wins over the file, and is filtered the same way: a name the
-            # description file does not make applicable cannot be run, so it is dropped and named
-            # rather than sent and silently ignored.
-            if test_cases is not None:
-                folder_path = os.path.dirname(json_file_path)
-                with open(os.path.join(folder_path, "Received_test_cases.json"), 'w') as fh:
-                    json.dump(enabled_keys, fh, indent=2)
-                selected = [name for name in test_cases if name in enabled_keys]
-                for name in test_cases:
-                    if name not in enabled_keys:
-                        self.logger.warning(
-                            f"Test case '{name}' was supplied by the caller but is not applicable "
-                            f"for this description file, skipping")
-                with open(os.path.join(folder_path, "selected_test_cases.json"), 'w') as fh:
-                    json.dump(selected, fh, indent=2)
-                self.logger.info(f"{len(selected)} of {len(test_cases)} caller-supplied test "
-                                 f"case(s) are applicable and will be run")
-                return selected
-            # Save all enabled keys to received test cases file
             folder_path = os.path.dirname(json_file_path)
-            output_file_received_path = os.path.join(folder_path, "Received_test_cases.json")
-            with open(output_file_received_path, 'w') as output_file:
-                json.dump(enabled_keys, output_file, indent=2)
+            self._write_list(os.path.join(folder_path, "Received_test_cases.json"), enabled_keys)
 
-            # Save selected test cases
+            app = getattr(self.config_manager, "app_name", None) or "this application"
+            selection = case_selection.resolve(
+                test_cases, os.path.join(folder_path, case_selection.FILE_NAME))
+            where = "passed by the caller" if selection.from_script else \
+                "in {0}".format(case_selection.FILE_NAME)
 
-            output_file_path = os.path.join(folder_path, "selected_test_cases.json")
+            if selection.kind == case_selection.EVERY:
+                selected = list(enabled_keys)
+                self.logger.info(f"All {len(selected)} case(s) the description file allows are "
+                                 f"selected (\"ALL\" {where})")
+            elif selection.kind == case_selection.NAMES:
+                # A name the description file does not allow cannot be run, so it is dropped and
+                # named rather than sent and silently ignored.
+                allowed = set(enabled_keys)
+                selected = [name for name in selection.names if name in allowed]
+                for name in selection.names:
+                    if name not in allowed:
+                        self.logger.warning(f"Test case '{name}' ({where}) is not allowed by "
+                                            f"this description file, skipping")
+                self.logger.info(f"{len(selected)} of {len(selection.names)} selected case(s) "
+                                 f"are allowed by the description file and will run")
+                if not selected:
+                    esdf = (getattr(self.config_manager, "file_map", None) or {}).get(
+                        "EsdfConfigurationModel") or "the description file"
+                    self.last_problem = (
+                        "Test Execution did not start: none of the {0} selected test case(s) is "
+                        "allowed by {1}.\n\n"
+                        "c3-testcases lists the names it allows; put them, or \"ALL\", in the "
+                        "selection.".format(len(selection.names), esdf))
+            else:
+                selected = []
+                self.last_problem = selection.refusal(app)
+                self.logger.info(f"Nothing selected to run ({selection.summary()})")
 
-            input_file_path = os.path.join(folder_path, "Manual_test_cases.json")
-
-            # An empty selection means the same thing as no selection file at all: nothing has
-            # been chosen, so every applicable case runs. `c3-init` creates this file empty so the
-            # user has something to edit, and deciding on the file's PRESENCE would turn that into
-            # "run nothing" for everyone who has not edited it yet.
-            manual_test_cases, reason = self._read_manual_selection(input_file_path)
-
-            if manual_test_cases is None:
-                self.logger.info(f"No manual selection ({reason}), running every applicable case")
-                with open(output_file_path, 'w') as output_file:
-                    json.dump(enabled_keys, output_file, indent=2)
-                self.logger.info(f"{len(enabled_keys)} enabled keys extracted and saved to "
-                                 f"{output_file_path}")
-                return enabled_keys
-
-            # A name the description file does not make applicable cannot be run, so it is dropped
-            # and named rather than sent and silently ignored.
-            newlist = []
-            for test_case_name in manual_test_cases:
-                if test_case_name in enabled_keys:
-                    newlist.append(test_case_name)
-                else:
-                    self.logger.warning(f"Test case '{test_case_name}' not found in Received "
-                                        f"TestCases List, skipping")
-
-            with open(output_file_path, 'w') as output_file:
-                json.dump(newlist, output_file, indent=2)
-
-            self.logger.info(f"{len(newlist)} matching test cases from manual test cases saved to "
-                             f"{output_file_path}")
-            return newlist
+            self._write_list(os.path.join(folder_path, "selected_test_cases.json"), selected)
+            return selected
 
         except json.JSONDecodeError as e:
             self.logger.error(f"Invalid JSON in file {json_file_path}: {str(e)}")
@@ -301,52 +292,10 @@ class TestCaseManager:
 
         return []
 
-    def _read_manual_selection(self, path: str) -> tuple:
-        """
-        The cases named in `Manual_test_cases.json`, or None when no choice has been made.
-
-        Returns (names, reason). `names` is None whenever the file does not express a choice -
-        missing, blank, or an empty list - and the caller then runs every applicable case, which
-        is what this client has always done when the file was absent.
-
-        `c3-init` creates the file empty, so "exists" stopped being the same question as "has a
-        selection in it". Reading an empty file as a selection of nothing would run no cases for
-        every user who has not edited it yet.
-
-        A file that is present but unreadable is a different matter: that is the user asking for
-        specific cases in a way we cannot understand, so it is reported as an error rather than
-        quietly turned into a full run.
-        """
-        if not os.path.exists(path):
-            return None, "no {0}".format(os.path.basename(path))
-
-        try:
-            with open(path, 'r', encoding="utf-8") as handle:
-                text = handle.read()
-        except OSError as exc:
-            self.logger.error(f"Could not read {path}: {exc}. Running every applicable case")
-            return None, "unreadable"
-
-        if not text.strip():
-            return None, "{0} is empty".format(os.path.basename(path))
-
-        try:
-            parsed = json.loads(text)
-        except ValueError as exc:
-            self.logger.error(f"{path} is not valid JSON ({exc}), so the cases listed in it "
-                              f"cannot be read. Running every applicable case instead - correct "
-                              f"the file if you meant to run a subset")
-            return None, "invalid JSON"
-
-        if not isinstance(parsed, list):
-            self.logger.error(f"{path} should hold a list of test case names, found "
-                              f"{type(parsed).__name__}. Running every applicable case")
-            return None, "not a list of names"
-
-        names = [str(item) for item in parsed if str(item).strip()]
-        if not names:
-            return None, "{0} lists no cases".format(os.path.basename(path))
-        return names, ""
+    @staticmethod
+    def _write_list(path: str, names: List[str]) -> None:
+        with open(path, 'w') as handle:
+            json.dump(names, handle, indent=2)
 
     def _extract_enabled_keys_from_json(self, json_data: Any) -> List[str]:
         """

@@ -34,6 +34,7 @@ module never invents or defaults a packet field.
 """
 import io
 import json
+import os
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -165,6 +166,41 @@ _CLOAK_EXIT_ILLEGAL_PACKET = "Illegal Packet Exit"
 
 class SequenceError(ValueError):
     """The sequence file is not a usable exerciser export."""
+
+
+#: The folder an application's sequences live in, under its input folder.
+SEQUENCE_DIR = "exerciser"
+
+
+def sequence_path(inputs: str, value: str) -> str:
+    """
+    The file a sequence setting names, relative to the application's input folder.
+
+    A bare file name that is not there is looked for in ``exerciser\\``, so a configuration
+    written before the sequences had their own folder still finds them after they move.
+    """
+    path = os.path.join(inputs, value)
+    if os.path.isfile(path) or os.path.dirname(value):
+        return path
+    moved = os.path.join(inputs, SEQUENCE_DIR, value)
+    return moved if os.path.isfile(moved) else path
+
+
+def available_sequences(inputs: str) -> List[str]:
+    """
+    The sequence files one application has, relative to its input folder: every ``.json`` in
+    ``exerciser\\``, then any still loose beside the configuration files.
+    """
+    folder = os.path.join(inputs, SEQUENCE_DIR)
+    found = []
+    if os.path.isdir(folder):
+        found = [os.path.join(SEQUENCE_DIR, name) for name in sorted(os.listdir(folder))
+                 if name.lower().endswith(".json") and os.path.isfile(os.path.join(folder, name))]
+    if os.path.isdir(inputs):
+        found += [name for name in sorted(os.listdir(inputs))
+                  if name.startswith("ExerciserSequence") and name.lower().endswith(".json")
+                  and os.path.isfile(os.path.join(inputs, name))]
+    return found
 
 
 def load_sequence_file(path: str) -> Dict[str, Any]:

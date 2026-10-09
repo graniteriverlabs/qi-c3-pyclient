@@ -29,7 +29,7 @@ import os
 import shutil
 import time
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 _PKG_DIR = Path(__file__).resolve().parent
 
@@ -171,9 +171,8 @@ def _update_config(workspace: Path, force: bool) -> Tuple[List[str], Optional[Pa
 
     if force:
         # Replacing the file loses the bench address and the file choices, so keep a copy. The
-        # stamp means repeated resets never overwrite one another.
-        backup = target.with_suffix(".json.bak-{0}".format(time.strftime("%Y%m%d-%H%M%S")))
-        shutil.copy2(target, backup)
+        # name is unique, so repeated resets never overwrite one another.
+        backup = _backup(target)
         shutil.copy2(shipped_path, target)
         return [], backup
 
@@ -191,23 +190,94 @@ def _update_config(workspace: Path, force: bool) -> Tuple[List[str], Optional[Pa
     return added, None
 
 
-def _ensure(force: bool = False) -> Tuple[Path, List[str], List[str], Optional[Path]]:
+def _backup(config: Path) -> Path:
+    """Copy the configuration aside under a name no earlier backup has, and return it."""
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    backup = config.with_suffix(".json.bak-{0}".format(stamp))
+    n = 1
+    while backup.exists():
+        n += 1
+        backup = config.with_suffix(".json.bak-{0}-{1}".format(stamp, n))
+    shutil.copy2(config, backup)
+    return backup
+
+
+#: Where each application's exerciser sequences live, under its input folder. Before this they sat
+#: loose beside the configuration files, where they outnumbered everything else.
+_SEQUENCE_DIR = "exerciser"
+
+
+def _migrate_sequences(workspace: Path) -> Dict[str, Any]:
+    """
+    Move each application's loose exerciser sequences into its ``exerciser`` folder, and point
+    ``ExerciserSequenceModel`` at the moved file.
+
+    Runs before the shipped files are seeded, so a workspace from an earlier version ends up with
+    one copy of each sequence - not the old loose one plus a new one in the folder. Every
+    ``ExerciserSequence*.json`` moves, shipped or exported by the user. Nothing is deleted: a file
+    whose name is already taken in ``exerciser`` stays where it is and is reported. The
+    configuration is backed up before it is changed, and only a setting naming a moved file is.
+
+    Returns ``{"moved", "kept", "settings", "backup"}``. Running it again finds nothing to do.
+    """
+    result: Dict[str, Any] = {"moved": [], "kept": [], "settings": [], "backup": None}
+    inputs = workspace / "JSON_User_input"
+    if not inputs.is_dir():
+        return result
+
+    for app_dir in sorted(p for p in inputs.iterdir() if p.is_dir()):
+        for source in sorted(p for p in app_dir.glob("ExerciserSequence*.json") if p.is_file()):
+            target = app_dir / _SEQUENCE_DIR / source.name
+            label = "{0}/{1}".format(app_dir.name, source.name)
+            if target.exists():
+                result["kept"].append(label)
+                continue
+            target.parent.mkdir(exist_ok=True)
+            os.replace(source, target)
+            result["moved"].append(label)
+
+    config = config_path(workspace)
+    if not config.is_file():
+        return result
+    try:
+        data = json.loads(config.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return result
+    for name, settings in (data.get("applications") or {}).items():
+        files = settings.get("files") if isinstance(settings, dict) else None
+        value = ((files or {}).get("ExerciserSequenceModel") or "").strip()
+        if not value or "/" in value or "\\" in value or (inputs / name / value).is_file():
+            continue
+        if (inputs / name / _SEQUENCE_DIR / value).is_file():
+            files["ExerciserSequenceModel"] = "{0}/{1}".format(_SEQUENCE_DIR, value)
+            result["settings"].append("applications.{0}.files.ExerciserSequenceModel: {1} -> "
+                                      "{2}/{1}".format(name, value, _SEQUENCE_DIR))
+    if result["settings"]:
+        result["backup"] = _backup(config)
+        config.write_text(json.dumps(data, indent=4, ensure_ascii=False) + "\n", encoding="utf-8")
+    return result
+
+
+def _ensure(force: bool = False) -> Tuple[Path, List[str], List[str], Optional[Path],
+                                          Dict[str, Any]]:
     """
     Create, seed and update the workspace. This is what ``c3-init`` runs.
 
     Safe to run again, and worth running after an upgrade: settings the new version adds are
-    merged into your configuration, and files that have gone missing are put back. Nothing you
-    have set is changed.
+    merged into your configuration, files that have gone missing are put back, and a workspace
+    laid out by an earlier version is brought up to date. Nothing you have set is changed.
 
     With ``force`` the shipped configuration and the shipped example inputs replace what is there,
     after backing the configuration up. Files you added yourself are still left alone.
 
-    Returns (workspace, settings added, files restored, configuration backup path).
+    Returns (workspace, settings added, files restored, configuration backup path, what the
+    layout migration did).
     """
     workspace = resolve_workspace()
     workspace.mkdir(parents=True, exist_ok=True)
 
     added, backup = _update_config(workspace, force)
+    migration = _migrate_sequences(workspace)
 
     restored: List[str] = []
     for rel in _SEED_DIRS:
@@ -226,7 +296,7 @@ def _ensure(force: bool = False) -> Tuple[Path, List[str], List[str], Optional[P
                 continue
             target.write_text(content, encoding="utf-8")
             restored.append("{0}/{1}/{2}".format(rel, app, name))
-    return workspace, added, restored, backup
+    return workspace, added, restored, backup, migration
 
 
 def ensure_workspace(force: bool = False) -> Path:
@@ -259,7 +329,8 @@ def unconfigured_warnings(workspace: Path) -> List[str]:
         if app.get("ip_address") == PLACEHOLDER_IP:
             warnings.append(
                 "ACTION REQUIRED: applications.{0}.ip_address is still the placeholder {1}.\n"
-                "  Set your tester's address in: {2}".format(app_name, PLACEHOLDER_IP, config))
+                "  Set it with:  c3-init --app {0} --tester <address>\n"
+                "  or in:        {2}".format(app_name, PLACEHOLDER_IP, config))
         app_path = app.get("app_path")
         if app_path and not Path(app_path).is_file():
             warnings.append(
@@ -322,6 +393,45 @@ def describe_workspace() -> str:
     return "\n".join(lines)
 
 
+def _tester_address(value: str) -> str:
+    """``--tester``: an IPv4 address a tester could have. Checked before anything is written."""
+    import ipaddress
+
+    try:
+        address = ipaddress.IPv4Address(value.strip())
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            "{0!r} is not an IPv4 address, for example 192.0.2.60".format(value))
+    if str(address) == PLACEHOLDER_IP:
+        raise argparse.ArgumentTypeError(
+            "{0} is the placeholder the package ships with, not a tester".format(address))
+    if address.is_unspecified or address.is_multicast or str(address) == "255.255.255.255":
+        raise argparse.ArgumentTypeError("{0} cannot be a tester's address".format(address))
+    return str(address)
+
+
+def _set_tester(workspace: Path, app: Optional[str], address: str) -> Tuple[str, Optional[str]]:
+    """
+    Write one application's tester address, and nothing else.
+
+    Returns (application, the address it had). Every other setting is written back exactly as it
+    was read, so this changes one value and no formatting.
+    """
+    target = config_path(workspace)
+    data = json.loads(target.read_text(encoding="utf-8"))
+    applications = data.get("applications") or {}
+    name = app or data.get("Selected_app")
+    if not isinstance(applications.get(name), dict):
+        raise SystemExit(
+            "Unknown application {0!r}. The tester address was not set.\n"
+            "Configured in {1}:\n  {2}".format(
+                name, target, "\n  ".join(sorted(applications)) or "(none)"))
+    previous = applications[name].get("ip_address")
+    applications[name]["ip_address"] = address
+    target.write_text(json.dumps(data, indent=4, ensure_ascii=False) + "\n", encoding="utf-8")
+    return name, previous
+
+
 def main() -> int:
     """Console entry point: create or update the workspace here, and report what it contains."""
     parser = argparse.ArgumentParser(
@@ -335,13 +445,37 @@ def main() -> int:
         help="replace the configuration and the shipped example inputs with this version's "
              "defaults. Your configuration is backed up first, and files you added yourself are "
              "left alone. Use this to start over, not to upgrade.")
+    parser.add_argument(
+        "--tester", metavar="ADDRESS", type=_tester_address, default=None,
+        help="your tester's IP address. Written to the application's ip_address in "
+             "grl_config.json; nothing else is changed.")
+    parser.add_argument(
+        "--app", metavar="NAME", default=None,
+        help="the application --tester is for; defaults to Selected_app. One of: {0}".format(
+            ", ".join(APPLICATIONS)))
     args = parser.parse_args()
+    if args.app and not args.tester:
+        parser.error("--app says which application --tester is for; give --tester as well")
 
-    _workspace, added, restored, backup = _ensure(force=args.force)
+    _workspace, added, restored, backup, migration = _ensure(force=args.force)
 
     if backup:
         print("Configuration replaced with this version's defaults.")
         print("  your previous one: {0}".format(backup))
+    if migration["moved"]:
+        print("Moved {0} exerciser sequence(s) into their application's exerciser folder:".format(
+            len(migration["moved"])))
+        for name in migration["moved"]:
+            print("  {0}".format(name))
+    if migration["kept"]:
+        print("Left in place - the exerciser folder already has a file with the same name:")
+        for name in migration["kept"]:
+            print("  {0}".format(name))
+    if migration["settings"]:
+        print("Updated {0} setting(s) to the new location:".format(len(migration["settings"])))
+        for line in migration["settings"]:
+            print("  {0}".format(line))
+        print("  your previous configuration: {0}".format(migration["backup"]))
     if added:
         print("Added {0} setting(s) new in this version:".format(len(added)))
         for key in added:
@@ -352,7 +486,16 @@ def main() -> int:
             print("  {0}".format(name))
         if len(restored) > 10:
             print("  ... and {0} more".format(len(restored) - 10))
-    if added or restored or backup:
+    if added or restored or backup or any(migration[k] for k in ("moved", "kept", "settings")):
+        print()
+
+    if args.tester:
+        # After the workspace is set up, so --force resets first and the address survives it.
+        name, previous = _set_tester(_workspace, args.app, args.tester)
+        was = ("unchanged" if previous == args.tester else
+               "was not set" if not previous or previous == PLACEHOLDER_IP else
+               "was {0}".format(previous))
+        print("Tester address for {0}: {1}   ({2})".format(name, args.tester, was))
         print()
 
     print(describe_workspace())

@@ -117,7 +117,7 @@ def main(config_file_path: str = "grl_config.json",
                                "Received_test_cases.json")
         outcome["listing"] = listing
         print(f"Full list: {listing}")
-        print("Put the ones you want to run in "
+        print("Put the ones you want to run, or \"ALL\" for every one, in "
               f"Test_Case_List_From_System/{app_name}/Manual_test_cases.json")
 
         if out:

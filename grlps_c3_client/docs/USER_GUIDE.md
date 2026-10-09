@@ -20,10 +20,11 @@ The README covers installing and the first run. This guide is the reference you 
 
 - [Call order](#call-order)
 - [`GRLApiClient(config_file_path, app, ip_address)`](#grlapiclientconfig_file_path-app-ip_address)
+- [`with GRLApiClient(...) as client`](#with-grlapiclient-as-client)
 - [`launch_app()`](#launch_app)
 - [`connect(ip_address=None)`](#connectip_addressnone)
-- [`set_project(project_name, esdf, test_cases)`](#set_projectproject_name-esdf-test_cases)
-- [`run_exerciser(sequence_file, dry_run)`](#run_exercisersequence_file-dry_run)
+- [`run_compliance(project_name, esdf, test_cases)`](#run_complianceproject_name-esdf-test_cases)
+- [`run_exerciser(sequence_file, dry_run, hold)`](#run_exercisersequence_file-dry_run-hold)
 - [`disconnect()`](#disconnect)
 - [`get_telemetry()`](#get_telemetry)
 - [`call_api(api_name, ...)`](#call_apiapi_name-)
@@ -74,11 +75,23 @@ that supplies its own values never disturbs the configured ones.
 |---|---|---|
 | Application | `GRLApiClient(app=...)` | `Selected_app` |
 | Tester address | `GRLApiClient(ip_address=...)` or `connect(ip)` | that application's `ip_address` |
-| Project name | `set_project(project_name=...)` | `ProjectConfigurationModel` |
-| Description file | `set_project(esdf=...)` | `files.EsdfConfigurationModel` |
-| Test cases | `set_project(test_cases=[...])` | `Manual_test_cases.json` |
+| Project name | `run_compliance(project_name=...)` | `ProjectConfigurationModel` |
+| Description file | `run_compliance(esdf=...)` | `files.EsdfConfigurationModel` |
+| Test cases | `run_compliance(test_cases=[...])`, or `["ALL"]` | `Manual_test_cases.json` |
 | Exerciser sequence | `run_exerciser(sequence_file=...)` | `files.ExerciserSequenceModel` |
 | Dry run | `run_exerciser(dry_run=...)` | `common.exerciser.dry_run` |
+| Session length | `run_exerciser(hold=...)` | until Enter is pressed |
+
+Test cases follow one rule wherever they come from: names run the ones the description file allows,
+`["ALL"]` runs every case it allows, and an empty or unreadable selection runs nothing.
+
+| `Manual_test_cases.json` holds | What happens |
+|---|---|
+| case names | the ones the description file allows run; any it does not allow are named and skipped |
+| `["ALL"]` | every case the description file allows runs |
+| `[]`, nothing, or no file | nothing runs, and the message says which file to edit |
+| invalid JSON, or not a list | nothing runs, and the message says what is wrong |
+| `"ALL"` together with names | nothing runs — `"ALL"` must be the only entry |
 
 ---
 
@@ -92,15 +105,15 @@ your-bench-folder\
 ├── JSON_User_input\
 │   └── <application>\                   one folder per application
 │       ├── esdf\                        put your description files here
+│       ├── exerciser\                   one exerciser sequence per power profile
 │       ├── project_config.json
 │       ├── tester_config.json
 │       ├── report_config.json
-│       ├── OptimumCoilValue*            optimum coil values
-│       └── ExerciserSequence*.json      one exerciser sequence per power profile
+│       └── OptimumCoilValue*            optimum coil values
 ├── Test_Case_List_From_System\
 │   └── <application>\
 │       ├── Received_test_cases.json     generated: every applicable case
-│       ├── Manual_test_cases.json       yours: which of them to run
+│       ├── Manual_test_cases.json       yours: which of them to run, or ["ALL"]
 │       └── selected_test_cases.json     generated: what was actually selected
 ├── Run_time_files\<application>\        generated: what the application reported back
 ├── Runtime_Capture\<application>\       generated: the application's own reports, per run
@@ -134,6 +147,8 @@ how settings a new version adds reach a workspace that already exists.
 |---|---|
 | `c3-init` in an empty folder | creates the workspace and seeds it |
 | `c3-init` in an existing one | merges in settings new to this version, restores missing files, reports both, and changes nothing you have set |
+| `c3-init` in a workspace from an earlier version | also moves exerciser sequences that sit loose beside the configuration files into `exerciser\`, and updates a setting that names a moved file, after backing the configuration up |
+| `c3-init --tester ADDRESS` | writes the tester address for `Selected_app`, or for `--app NAME`; nothing else changes |
 | `c3-init --force` | replaces the configuration and the shipped example inputs with this version's defaults, after copying your configuration to `grl_config.json.bak-<timestamp>` |
 
 The merge adds keys at any depth — a new run control inside `common.exerciser`, a whole new
@@ -157,11 +172,11 @@ even by `--force`, which only replaces the files the package ships.
 | `app_name` | must match the block's own name |
 | `app_path` | the installed executable |
 | `known_port` | the port the application serves on |
-| `ip_address` | your tester. Ships as `192.0.2.50`, an unroutable placeholder |
+| `ip_address` | your tester. Ships as `192.0.2.50`, an unroutable placeholder; `c3-init --tester` sets it |
 | `is_multiple_esdf_files` | run once per description file in the `esdf` folder |
 | `files.EsdfConfigurationModel` | the description file, relative to this application's folder |
-| `files.ExerciserSequenceModel` | the exerciser sequence to use by default |
-| `files.OptimumCoilValueXml` / `OptimumCoilValueJson` | optimum coil values |
+| `files.ExerciserSequenceModel` | the exerciser sequence, e.g. `exerciser/ExerciserSequence-MPP25.json`. A bare file name is also looked for in `exerciser\` |
+| `files.OptimumCoilValue` | optimum coil values, a JSON or XML file. `OptimumCoilValueXml` is the older name for the same setting and is still read |
 | `files.ProjectConfigurationModel` / `TesterConfigurationModel` / `ReportConfigurationModel` | the three setup files |
 
 **`common`** — how a run behaves:
@@ -183,18 +198,21 @@ even by `--force`, which only replaces the files the package ships.
 ### Call order
 
 ```
-GRLApiClient(...)      build the client
-  launch_app()         start the application and pick the transport
-  connect()            connect the tester; reads the licence
-  set_project(...)     compliance: project, description file, cases, run, report
+GRLApiClient(...)        build the client
+  launch_app()           start the application and pick the transport
+  connect()              connect the tester; reads the licence
+  run_compliance(...)    compliance: project, description file, cases, run, report
     or
-  run_exerciser(...)   exerciser: apply the exported settings, start, hold, stop, capture
-  disconnect()         always, in a finally
+  run_exerciser(...)     exerciser: apply the exported settings, start, hold, stop, capture
+  disconnect()           always, in a finally
 ```
 
 `launch_app()` must come first: until the application is up, nothing knows which port to talk to or
 whether this is a REST or a WebSocket build. `connect()` must come before either run method — the
 exerciser licence is read from the connection.
+
+`with GRLApiClient(...) as client:` does the first two steps on entry and the last on exit, so the
+block only holds the run itself.
 
 ---
 
@@ -219,6 +237,21 @@ client = GRLApiClient(app="GRL-C3-MP-TPR", ip_address="192.0.2.77")   # one scri
 **Raises** `FileNotFoundError` if the configuration file is not there, naming the path it looked at
 and the directory it looked from — the usual cause is a relative path and the wrong working
 directory. **Raises** `ValueError` for an unknown `app`, listing the configured ones.
+
+---
+
+### `with GRLApiClient(...) as client`
+
+Starts the application and connects the tester on entry; disconnects and closes the application on
+exit — normally or through an exception.
+
+```python
+with GRLApiClient(app="GRL-C3-MP-TPR", ip_address="192.0.2.77") as client:
+    print(client.run_compliance(test_cases=["ALL"]))
+```
+
+**Raises** `RuntimeError` on entry if the application does not start or the tester does not
+connect, saying which and why. Everything is closed again first, and the block does not run.
 
 ---
 
@@ -250,16 +283,16 @@ back, which is why it must happen before `run_exerciser()`.
 |---|---|---|
 | `ip_address` | `None` | the tester. `None` uses the constructor's value, then the configured one |
 
-**Returns** a dict with **either** `success` **or** `error` — check for `error`:
+**Returns** `{"success": True, "data": {...}}` once the application reports the tester connected,
+or `{"success": False, "error": "..."}`:
 
 ```python
 result = client.connect()
-if "error" in result:
+if not result["success"]:
     raise SystemExit("tester not reachable: {0}".format(result["error"]))
 
-info = result.get("success")
-if isinstance(info, dict):
-    print(info.get("testerStatus"), info.get("firmwareVersion"))
+info = result["data"]
+print(info.get("testerStatus"), info.get("firmwareVersion"))
 ```
 
 The address can come from three places. The call wins, then the constructor, then the configuration
@@ -267,16 +300,17 @@ file.
 
 ---
 
-### `set_project(project_name, esdf, test_cases)`
+### `run_compliance(project_name, esdf, test_cases)`
 
 The whole compliance run: create the project, load the description file, sync the power profile to
-it, select the cases, submit them, run them, and collect the report.
+it, select the cases, submit them, run them, and collect the report. `set_project` is the same call
+under its earlier name, and takes the same arguments.
 
 | Parameter | Default | Meaning |
 |---|---|---|
 | `project_name` | `None` | `None` uses `ProjectConfigurationModel` |
 | `esdf` | `None` | description file relative to the application's folder, e.g. `"esdf/MyDevice.json"`. `None` uses `files.EsdfConfigurationModel` |
-| `test_cases` | `None` | the cases to run. `None` uses `Manual_test_cases.json`, or every applicable case while that file is empty or absent |
+| `test_cases` | `None` | case names, or `["ALL"]` for every case the description file allows. `None` uses `Manual_test_cases.json`. An empty selection runs nothing |
 
 **Returns** a one-element list describing the outcome:
 
@@ -285,13 +319,17 @@ it, select the cases, submit them, run them, and collect the report.
 | `["Test Execution completed"]` | every selected case reached a verdict |
 | `["Test Execution INCOMPLETE: N of M selected case(s) never reached a verdict"]` | the application stopped early; the cases that never finished are named in the log |
 | `["Test Execution did not start: no project was created. ..."]` | refused before anything ran — the description file could not be verified, its power profile could not be read, or the licence does not cover the profile. The reason is logged |
+| `["Test Execution did not start: none of the N selected test case(s) is allowed by ..."]` | no selected name is a case the description file allows |
+| `["No test cases selected for ..."]` | the selection was empty. Nothing was sent to the application |
+| `["The test case selection for ... cannot be used ..."]` | the selection could not be read. Nothing was sent |
+| `["esdf cannot be used for ..."]` | `is_multiple_esdf_files` is on, so a file or list passed for one run has nowhere to apply |
 | `["Test Execution failed: ..."]` | the application rejected the submitted list |
 
-**A refusal is never reported as a completion.** Check for `"completed"` only, not for a
-non-empty list.
+**A refusal is never reported as a completion.** Only `["Test Execution completed"]` means the run
+finished; `c3-run` exits `0` for that and `1` for anything else.
 
 ```python
-print(client.set_project(
+print(client.run_compliance(
     project_name="MyProject",
     esdf="esdf/MyDevice.json",
     test_cases=[
@@ -303,33 +341,37 @@ print(client.set_project(
 
 **Case names must match what the description file makes applicable.** A name that does not is
 dropped and named in the log rather than sent and silently ignored, so a typo costs one case and
-not the run. Passing `[]` selects nothing and runs nothing — asking for no cases is not the same as
-asking for all of them.
+not the run. An empty or unreadable selection is refused before anything is sent to the
+application or the controller.
 
 A description file supplied here is applied for this run only and put back afterwards; your
 configuration file is not rewritten.
 
-With `is_multiple_esdf_files` set, the run repeats once per description file in the `esdf` folder.
+With `is_multiple_esdf_files` set, the run repeats once per description file in the `esdf` folder,
+each with `Manual_test_cases.json`. Passing `esdf` or `test_cases` then is refused rather than
+ignored.
 
 ---
 
-### `run_exerciser(sequence_file, dry_run)`
+### `run_exerciser(sequence_file, dry_run, hold)`
 
 Drives the emulator from the sequence exported by the application's own UI, instead of running
 compliance cases.
 
 | Parameter | Default | Meaning |
 |---|---|---|
-| `sequence_file` | `None` | the sequence to use, relative to the application's folder. `None` uses `files.ExerciserSequenceModel` |
+| `sequence_file` | `None` | the sequence to use, relative to the application's folder, e.g. `"exerciser/ExerciserSequence-MPP15.json"`. `None` uses `files.ExerciserSequenceModel` |
 | `dry_run` | `None` | compose every request and send none. `None` uses `common.exerciser.dry_run` |
+| `hold` | `None` | seconds the exerciser runs before the session stops by itself. `None` runs until Enter is pressed, which needs a console |
 
-**A sequence is required, and `c3-init` seeds one per power profile**, so a session runs
-without exporting anything first. Pass one by name, or leave `sequence_file` as `None` to use the
-one named in the configuration. `c3-apps` lists what each application has.
+**A sequence is required, and `c3-init` seeds one per power profile** into the application's
+`exerciser\` folder, so a session runs without exporting anything first. Pass one by name, or leave
+`sequence_file` as `None` to use the one named in the configuration. A bare file name is looked for
+in `exerciser\` too.
 
 To use a setup of your own, build it in the application's UI, export it, put the file in
-`JSON_User_input\<application>\` and pass or configure its name. Nothing is hand-typed either
-way — what runs is what you built and saw in the application.
+`JSON_User_input\<application>\exerciser\` and pass or configure its name. Nothing is hand-typed
+either way — what runs is what you built and saw in the application.
 
 **Returns** a dict:
 
@@ -358,22 +400,26 @@ A step the controller has no endpoint for is marked `skipped` — the four appli
 support the same settings, and that is not a failure.
 
 ```python
-outcome = client.run_exerciser(sequence_file="ExerciserSequence-MPP15.json")
+outcome = client.run_exerciser(sequence_file="exerciser/ExerciserSequence-MPP15.json", hold=60)
 print("capture:", (outcome.get("capture") or {}).get("copied_to"))
 ```
 
-**A session has no end of its own.** It runs until you press Enter. Ctrl+C also stops it cleanly,
-and either way the emulation is stopped and the capture collected. Because it waits for a keypress,
-a session that starts the emulator is refused before anything is sent when no console is attached —
-run it from a terminal, or use `dry_run`.
+**A session has no end of its own.** With `hold` it stops after that many seconds, and that counts
+as success; pressing Enter in a console ends it sooner. Without `hold` it runs until you press
+Enter. Ctrl+C also stops it cleanly, and every way the emulation is stopped and the capture
+collected. A session that would wait for Enter is refused before anything is sent when no console
+is attached — a scheduled task, or input redirected from `NUL` — so pass `hold`, or use `dry_run`.
+
+The `hold` record in `results` says how it ended: `reason` is, for example, `hold limit reached`,
+`operator` (Enter), `interrupted` (Ctrl+C) or `link lost`, and `held_seconds` is how long it ran.
 
 ---
 
 ### `disconnect()`
 
 Stops live data, closes the HTTP session, and shuts the application down. Safe to call more than
-once. **Always call it in a `finally`**, or the application is left running and the next run finds
-the port occupied.
+once. **Always call it in a `finally`** — or use `with GRLApiClient(...)`, which does — or the
+application is left running and the next run finds the port occupied.
 
 ---
 
@@ -440,11 +486,18 @@ outcome = sample_run.main(
 )
 ```
 
-Called with no arguments, `sample_run.main()` is exactly the configuration-based run. Each also has
-a `cli()` returning 0 or 1, which is what the commands use.
+Called with no arguments, `sample_run.main()` is exactly the configuration-based run. It also takes
+`sequence_file`, `dry_run` and `hold` for an exerciser session. Each module also has a `cli()`
+returning 0 or 1, which is what the commands use.
 
-`sample_run.main()` returns `launched`, `connected`, `mode`, and then `compliance` or `exerciser`.
-A step that never happened leaves its key out, so the absence of a key tells you where it stopped.
+Before it starts anything, `sample_run.main()` prints what the run will use — the summary `c3-run`
+and `c3-exerciser` show — and stops there if something would stop the run: no tester address, a
+missing description file or sequence, nothing selected, or a session that would wait for Enter with
+no console attached. Every reason is printed, so one attempt shows everything there is to fix.
+
+It returns `launched`, `connected`, `mode`, and then `compliance` or `exerciser`. A step that never
+happened leaves its key out, so the absence of a key tells you where it stopped. `refused` holds the
+reasons when the run was stopped before anything started.
 
 ---
 
@@ -466,10 +519,24 @@ they show every call the client made and what came back.
 
 ### Troubleshooting
 
-**`ACTION REQUIRED: ... ip_address is still the placeholder`**
-The tester address has not been set. `192.0.2.50` is a deliberately unroutable placeholder so an
+**`ACTION REQUIRED: ... ip_address is still the placeholder`**, **`No tester address is set for ...`**
+The tester address has not been set: run `c3-init --tester <address>`, adding `--app <name>` for an
+application other than the selected one. `192.0.2.50` is a deliberately unroutable placeholder so an
 unconfigured install fails fast. A script that passes `ip_address` does not need the configured
 value set.
+
+**`No test cases selected for ...`**
+`Manual_test_cases.json` for that application is empty — which is how `c3-init` creates it — or a
+script passed `test_cases=[]`. Name the cases, or use `["ALL"]` for every case the description file
+allows. Nothing was started.
+
+**`The test case selection for ... cannot be used`**
+The message names the file and what is wrong with it: the line and column of a JSON error, an entry
+that is not a name, or `"ALL"` given together with case names. Nothing was started.
+
+**`This session runs until you press Enter, but no console is attached to read it`**
+The session was started where nobody can press Enter — a scheduled task, or input redirected from
+`NUL`. Pass `hold=SECONDS`, run it from a terminal, or set `common.exerciser.dry_run`.
 
 **`RuntimeError` about Windows or the Python version at import**
 The client requires Windows and CPython 3.11 or newer. Check with `python -V`.
@@ -481,11 +548,11 @@ an absolute path, or set `GRL_C3_PROJECT_ROOT`.
 **`No GRL C3 workspace in: ...`**
 `c3-init` has not been run in this folder.
 
-**`The exerciser sequence configured for ... is missing`**
-`c3-apps` lists the sequences each application has; pass one to `c3-exerciser --sequence`, or name
-it under `files.ExerciserSequenceModel`. `c3-init` seeds one per power profile, so this normally
-means the file was moved or renamed. For a profile that is not seeded, export the sequence from
-the application's own UI into `JSON_User_input\<application>\`.
+**`The exerciser sequence for ... is missing`**
+The message lists the sequences that are there; point `files.ExerciserSequenceModel` at one of
+them. `c3-init` seeds one per power profile, so this normally means the file was moved or renamed.
+For a profile that is not seeded, export the sequence from the application's own UI into
+`JSON_User_input\<application>\exerciser\`.
 
 **The application does not start**
 Check `app_path` for that application, and that the C3 software runs on its own. Close any copy
@@ -496,14 +563,14 @@ cannot shut it down.
 The tester's firmware does not support the profile in the description file. The BPP/EPP firmware
 exposes only its own profiles, whatever description file is selected.
 
-**A case I asked for did not run**
+**A case I asked for did not run**, **`Test Execution did not start: none of the ... selected test case(s) is allowed by ...`**
 Names must match what the description file makes applicable. Unmatched names are named in the log.
-Refresh the list with `c3-testcases` and copy them verbatim.
+Refresh the list with `c3-testcases` and copy them verbatim, or use `["ALL"]`.
 
 **Zero applicable cases**
 The description file does not describe the connected device, or the profile does not match. The
 applicable count is per profile: `c3-testcases` prints it.
 
 **A session that will not stop**
-An exerciser session runs until Enter. If no console is attached it is refused before anything is
-sent, so nothing was started.
+An exerciser session without `hold` runs until Enter. If no console is attached it is refused before
+anything is sent, so nothing was started. From a script, pass `hold=SECONDS`.

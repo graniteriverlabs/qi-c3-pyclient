@@ -40,7 +40,7 @@
                 "TesterConfigurationModel": "tester_config.json",
                 "ReportConfigurationModel": "report_config.json",
                 "OptimumCoilValue": "OptimumCoilValueTPR_MPP4.json",
-                "ExerciserSequenceModel": "ExerciserSequence-MPP25.json",
+                "ExerciserSequenceModel": "exerciser/ExerciserSequence-MPP25.json",
                 "EsdfFolderName": "esdf"
             }
         },
@@ -57,7 +57,7 @@
                 "ReportConfigurationModel": "report_config.json",
                 "OptimumCoilValueXml": "OptimumCoilValue.xml",
                 "EsdfFolderName": "esdf",
-                "ExerciserSequenceModel": "ExerciserSequence.json"
+                "ExerciserSequenceModel": "exerciser/ExerciserSequence.json"
             }
         },
         "GRL-C3-TPT-MPP": {
@@ -72,7 +72,7 @@
                 "TesterConfigurationModel": "tester_config.json",
                 "ReportConfigurationModel": "report_config.json",
                 "OptimumCoilValue": "OptimumCoilValueTPT.json",
-                "ExerciserSequenceModel": "ExerciserSequence-MPP15.json",
+                "ExerciserSequenceModel": "exerciser/ExerciserSequence-MPP15.json",
                 "EsdfFolderName": "esdf"
             }
         },
@@ -89,7 +89,7 @@
                 "ReportConfigurationModel": "report_config.json",
                 "OptimumCoilValueXml": "OptimumCoilValue.xml",
                 "EsdfFolderName": "esdf",
-                "ExerciserSequenceModel": "ExerciserSequence-BPP.json"
+                "ExerciserSequenceModel": "exerciser/ExerciserSequence-BPP.json"
             }
         }
     },

@@ -501,6 +501,20 @@ class _InterruptGuard:
         return False
 
 
+def variant_for(app_name: Optional[str]) -> Optional[str]:
+    """The exerciser controller variant for an application, or None when it has no exerciser."""
+    return _VARIANT.get(app_name)
+
+
+def hold_problem(value: Any) -> str:
+    """Why ``hold`` cannot be used as a session's length in seconds; empty when it can."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return "hold must be a number of seconds, not {0!r}".format(value)
+    if not value > 0:
+        return "hold must be more than 0 seconds, not {0!r}".format(value)
+    return ""
+
+
 def _stdin_is_interactive() -> bool:
     """
     Whether an operator can actually press Enter.
@@ -508,9 +522,22 @@ def _stdin_is_interactive() -> bool:
     The hold phase ends on a keypress, so a session with no console attached (a scheduled task, a
     piped run) could never end it. Checked pre-flight so such a session is refused BEFORE the
     exerciser is started, rather than started and then waited on forever.
+
+    ``isatty()`` alone is not enough on Windows: it is true for the NUL device, which is what a
+    scheduled task or a ``< NUL`` redirect gives a process, and nothing can ever be typed there.
+    Only a real console accepts ``GetConsoleMode``, so that is what decides it.
     """
     try:
-        return bool(sys.stdin) and sys.stdin.isatty()
+        if not sys.stdin or not sys.stdin.isatty():
+            return False
+        if os.name != "nt":
+            return True
+        import ctypes
+        import msvcrt
+
+        mode = ctypes.c_uint32()
+        handle = msvcrt.get_osfhandle(sys.stdin.fileno())
+        return bool(ctypes.windll.kernel32.GetConsoleMode(handle, ctypes.byref(mode)))
     except Exception:                                             # pragma: no cover - defensive
         return False
 
@@ -689,6 +716,8 @@ class ExerciserManager:
         self._license_reason: str = "license not checked yet"
         #: When true, requests are composed and logged but never sent.
         self.dry_run: bool = False
+        #: Seconds the session runs before it stops by itself; None waits for the operator.
+        self._hold_limit: Optional[float] = None
         #: Where a session's evidence is written (set by the client before run_session).
         self.capture_dir: Optional[str] = None
         #: Packet count from the previous monitor sweep, for the growth figure.
@@ -719,7 +748,7 @@ class ExerciserManager:
     @property
     def variant(self) -> Optional[str]:
         """The exerciser controller variant for the selected app, or None if unsupported."""
-        return _VARIANT.get(getattr(self.config_manager, "app_name", None))
+        return variant_for(getattr(self.config_manager, "app_name", None))
 
     @property
     def licensed(self) -> bool:
@@ -1101,15 +1130,20 @@ class ExerciserManager:
                             f"Leave it unset unless you need a legacy spec/technology; exerciser "
                             f"mode itself is entered by 'start'")
 
-        # A started exerciser runs until the operator ends it, and the hold phase reads that from
-        # the console. With no console there is no way to end it, so refuse here - before anything
-        # is sent - instead of starting the hardware and then waiting on a keypress that can never
-        # come. A dry run starts nothing, so it is exempt.
-        if (not self.dry_run and any(s.get("op") == "start" for s in steps)
+        hold = session_cfg.get("hold_seconds")
+        if hold is not None and hold_problem(hold):
+            problems.append(hold_problem(hold))
+
+        # A started exerciser runs until something ends it. Without a time limit that is the
+        # operator, read from the console; with no console there is no way to end it, so refuse
+        # here - before anything is sent - instead of starting the hardware and then waiting on a
+        # keypress that can never come. A dry run starts nothing, so it is exempt.
+        if (not self.dry_run and hold is None and any(s.get("op") == "start" for s in steps)
                 and not _stdin_is_interactive()):
             problems.append("this session starts the exerciser, which then runs until you press "
                             "Enter - but no console is attached to read that keypress. Run it from "
-                            "a terminal, or set common.exerciser.dry_run to true")
+                            "a terminal, pass hold=SECONDS from a script, or set "
+                            "common.exerciser.dry_run to true")
         return problems
 
     # Convenience wrappers (also used directly): route through the registry so they are
@@ -1316,9 +1350,10 @@ class ExerciserManager:
         Keep the session open while the exerciser runs, sampling live readings.
 
         The exerciser is not a test list — the app never ends it — so this is what gives the
-        session its duration. Ends on any of three things:
+        session its duration. Ends on any of four things:
 
-          * the operator presses Enter (the normal case),
+          * the operator presses Enter (the normal case at a bench),
+          * the time limit passed as ``hold`` runs out (the normal case in a script),
           * Ctrl+C,
           * `_MONITOR_FAIL_LIMIT` sweeps in a row come back empty, meaning the tester link is gone.
 
@@ -1330,6 +1365,8 @@ class ExerciserManager:
         truncated = False
         fails = 0
         done = self._stop_requested
+        limit = self._hold_limit
+        interactive = _stdin_is_interactive()
 
         # Enter is read on a daemon thread so the monitor keeps sampling while we wait. Daemon, so
         # a thread still parked on stdin can never hold up interpreter shutdown.
@@ -1345,9 +1382,18 @@ class ExerciserManager:
                 line = ""
             self._request_stop("operator" if line not in ("", None) else "input closed")
 
-        threading.Thread(target=_wait_for_enter, name="exerciser-hold", daemon=True).start()
-        self.logger.warning("[exerciser] RUNNING - press Enter in THIS console window to stop "
-                            "(Ctrl+C also stops it cleanly)")
+        # Only a real console is read. NUL or a pipe answers "" at once, which would end a timed
+        # session the moment it started.
+        if interactive:
+            threading.Thread(target=_wait_for_enter, name="exerciser-hold", daemon=True).start()
+        if limit:
+            self.logger.warning("[exerciser] RUNNING for {0}{1} (Ctrl+C also stops it "
+                                "cleanly)".format(_fmt_elapsed(limit),
+                                                  " - press Enter to stop sooner" if interactive
+                                                  else ""))
+        else:
+            self.logger.warning("[exerciser] RUNNING - press Enter in THIS console window to "
+                                "stop (Ctrl+C also stops it cleanly)")
 
         try:
             # Sample first, THEN check for the stop request, so even a session ended immediately
@@ -1366,7 +1412,7 @@ class ExerciserManager:
                 # The prompt scrolls out of sight behind the readings, so say it again now and
                 # then - otherwise a session looks like it has no way out.
                 sweeps += 1
-                if sweeps % _PROMPT_EVERY == 0 and not done.is_set():
+                if sweeps % _PROMPT_EVERY == 0 and not done.is_set() and interactive:
                     self.logger.warning("[exerciser] still RUNNING - press Enter in this console "
                                         "window (or Ctrl+C) to stop")
 
@@ -1379,9 +1425,15 @@ class ExerciserManager:
                         self.logger.error(f"[exerciser] {fails} monitor sweeps in a row came back "
                                           f"empty - the tester link looks down; ending the session")
                         break
+                elapsed = time.monotonic() - started_at
+                if limit and elapsed >= limit:
+                    self._request_stop("hold limit reached")
                 if done.is_set():
                     break
-                done.wait(_MONITOR_INTERVAL_S)
+                # Never sleep past the limit, so a timed session ends on time, not up to a full
+                # sampling interval late.
+                done.wait(min(_MONITOR_INTERVAL_S, limit - elapsed) if limit
+                          else _MONITOR_INTERVAL_S)
         except KeyboardInterrupt:            # only if the guard could not be installed
             self._request_stop("interrupted")
             self.logger.warning("[exerciser] interrupted - stopping the exerciser")
@@ -1392,7 +1444,9 @@ class ExerciserManager:
         reason = self._stop_reason or "operator"
         held = round(time.monotonic() - started_at, 1)
         self.logger.info(f"[exerciser] hold ended after {_fmt_elapsed(held)} ({reason})")
-        return {"op": "hold", "success": reason in ("operator", "interrupted"),
+        # Reaching the time limit is how a timed session is meant to end, so it is a success.
+        return {"op": "hold", "success": reason in ("operator", "interrupted",
+                                                   "hold limit reached"),
                 "reason": reason, "held_seconds": held, "samples": samples,
                 "samples_truncated": truncated, "verified": "n/a (hold)"}
 
@@ -1429,6 +1483,7 @@ class ExerciserManager:
         session_cfg = session_cfg or {}
         steps = list(steps or [])
         self.dry_run = bool(session_cfg.get("dry_run", False))
+        self._hold_limit = session_cfg.get("hold_seconds")
         self._stop_requested = threading.Event()      # fresh per session
         self._stop_reason = None
         self._last_packets = None

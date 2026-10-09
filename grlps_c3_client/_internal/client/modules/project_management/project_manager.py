@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Any
 
 from API import ApiName
+from . import case_selection
 from .coil_data_manager import CoilDataManager
 from .esdf_manager import EsdfManager
 from .project_config_manager import ProjectConfigManager
@@ -370,29 +371,80 @@ class ProjectManager:
             project_name: Base name of the project. None -> `ProjectConfigurationModel`.
             esdf: description file to use, relative to this application's input folder
                 (e.g. "esdf/MyDevice.json"). None -> `files.EsdfConfigurationModel`.
-            test_cases: cases to run. None -> `Manual_test_cases.json`, or every applicable
-                case when that file is absent.
+            test_cases: cases to run, or ["ALL"] for every case the description file allows.
+                None -> `Manual_test_cases.json`. An empty selection runs nothing.
 
         Returns:
-            Combined test case list from all ESDF files
+            One status line. "Test Execution completed" is the only one that means the run
+            finished; anything else says why it did not.
         """
-        # Applied to the in-memory file map only, and put back afterwards, so supplying an ESDF
-        # for one run never rewrites the user's configuration file.
-        file_map = self.config_manager.file_map or {}
-        original_esdf = file_map.get("EsdfConfigurationModel")
+        # With several description files every file in the folder is run, each with the selection
+        # file, so one file or one list passed for this run has nowhere to apply. Say so rather
+        # than run something other than what was asked for.
+        refusal = self.override_refusal(esdf, test_cases)
+        if refusal:
+            self.logger.error(refusal)
+            return [refusal]
+
+        # Applied to the in-memory file map only, and put back exactly afterwards - removed again
+        # if it was not there - so supplying an ESDF for one run never rewrites the user's
+        # configuration and never outlives the run.
+        if self.config_manager.file_map is None:
+            self.config_manager.file_map = {}
+        file_map = self.config_manager.file_map
+        key = "EsdfConfigurationModel"
+        had, original_esdf = key in file_map, file_map.get(key)
         if esdf:
-            file_map["EsdfConfigurationModel"] = esdf
+            file_map[key] = esdf
             self.logger.info(f"Description file for this run: {esdf}")
         try:
             return self._set_project(project_name, test_cases)
         finally:
-            if esdf and original_esdf is not None:
-                file_map["EsdfConfigurationModel"] = original_esdf
+            if esdf:
+                if had:
+                    file_map[key] = original_esdf
+                else:
+                    file_map.pop(key, None)
+
+    def override_refusal(self, esdf: Optional[str], test_cases: Optional[List[str]]) -> str:
+        """
+        Why ``esdf`` or ``test_cases`` passed for this run cannot be used; empty when they can.
+        """
+        if not getattr(self.config_manager, "is_multiple_esdf_files", False):
+            return ""
+        passed = [name for name, value in (("esdf", esdf), ("test_cases", test_cases))
+                  if value is not None]
+        if not passed:
+            return ""
+        app = self.config_manager.app_name
+        return ("{0} cannot be used for {1}: applications.{1}.is_multiple_esdf_files is true, so "
+                "every description file in its folder is run, each with Manual_test_cases.json.\n\n"
+                "Set is_multiple_esdf_files to false to run one description file, or leave {0} "
+                "out.".format(" and ".join(passed), app))
+
+    def selection(self, test_cases: Optional[List[str]] = None) -> "case_selection.Selection":
+        """
+        The cases this run has been asked for: ``test_cases`` when given, else this
+        application's ``Manual_test_cases.json``. Reads files only; sends nothing.
+        """
+        path = case_selection.selection_path(self._setup_directories()["root_dir"],
+                                             self.config_manager.app_name or "Unknown_App")
+        return case_selection.resolve(test_cases, path)
 
     def _set_project(self, project_name: str = None, test_cases: List[str] = None):
         """The run itself, once any per-run overrides are in place."""
         try:
             directories = self._setup_directories()
+
+            # Nothing is sent to the application, and the controller is not touched, until it is
+            # known that there is something to run. An empty or unusable selection used to run
+            # every applicable case - 636 on MPP-TPR - which is never what it asked for.
+            selection = self.selection(test_cases)
+            if not selection.runnable:
+                message = selection.refusal(self.config_manager.app_name)
+                self.logger.error(message)
+                return [message]
+            self.test_case_manager.last_problem = ""
 
             # Compliance: the app does NOT set the controller's spec mode from the ESDF, so make
             # the controller match the selected ESDF's PowerProfile BEFORE the guard reads it —
@@ -435,10 +487,14 @@ class ProjectManager:
                 # completion. Seen on the bench on 2026-10-08 with a tampered file: rejected ten
                 # times over, and the caller was told the execution had completed.
                 if not test_cases_list:
-                    message = ("Test Execution did not start: no project was created. "
-                               "The reason is logged above - the description file was refused, "
-                               "its power profile could not be read, or the licence does not "
-                               "cover the profile asked for.")
+                    # The selection was usable, so an empty list has one of two causes, and only
+                    # the case manager knows which: none of the names is one the description file
+                    # allows, or the project was never created at all.
+                    message = self.test_case_manager.last_problem or (
+                        "Test Execution did not start: no project was created. "
+                        "The reason is logged above - the description file was refused, "
+                        "its power profile could not be read, or the licence does not "
+                        "cover the profile asked for.")
                     self.logger.error(message)
                     return [message]
 
