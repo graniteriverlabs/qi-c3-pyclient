@@ -28,7 +28,6 @@ the run summary, but NEVER raises, so a capture problem can never abort the test
 import json
 import os
 import shutil
-import zipfile
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -175,30 +174,36 @@ class DataCaptureManager:
         return rec
 
     def finalize_run(self) -> Optional[str]:
-        """Write the final summary and zip the run directory into one ZIP. Returns the ZIP path."""
+        """
+        Collect the application's reports and write the summary. Returns the run directory.
+
+        This used to also write the whole directory out again as `<run>.zip` beside it, and keep
+        both. That made sense when the capture was this client's own files - a report archive per
+        case, a packet log, a stream file - and the archive was the thing you sent on. Since the
+        export became the application's own report folder, copied as the application wrote it, the
+        archive held the same files with the same checksums: 13 files kept twice, 1.8 times the
+        bytes, and nothing in the client, the documentation or either test suite read it. The
+        folder is what the documentation points at and what a reader opens.
+
+        Zipping a folder to send it is one action in the file manager, and does not need every run
+        stored twice to make it possible.
+        """
         if not self._active or not self.run_dir:
             return None
         self._active = False
         try:
             # The reports a reader actually opens are the ones the application writes in its own
             # location - the final report as PDF, HTML and JSON, the per-case pages and the
-            # device description report. Collect those before packaging, or the export carries
-            # only the packet and stream data this client assembles, which is not the result.
+            # device description report. Collect those, or the export carries only the packet and
+            # stream data this client assembles, which is not the result.
             self._capture_app_reports()
             self.summary["finished"] = datetime.now().strftime("%Y%m%d-%H%M%S")
             self.summary["case_count"] = len(self.summary.get("cases", []))
             self._write_summary()
-            zip_path = self.run_dir + ".zip"
-            base_parent = os.path.dirname(self.run_dir)
-            with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
-                for root, _dirs, files in os.walk(self.run_dir):
-                    for fn in files:
-                        full = os.path.join(root, fn)
-                        z.write(full, os.path.relpath(full, base_parent))
-            self.logger.info(f"[capture] run packaged -> {zip_path}")
-            return zip_path
+            self.logger.info(f"[capture] run collected -> {self.run_dir}")
+            return self.run_dir
         except Exception as e:
-            self.logger.warning(f"[capture] packaging failed: {e}")
+            self.logger.warning(f"[capture] collecting the run failed: {e}")
             return None
 
     def _app_report_folders(self) -> Tuple[Optional[str], List[Dict[str, Any]]]:

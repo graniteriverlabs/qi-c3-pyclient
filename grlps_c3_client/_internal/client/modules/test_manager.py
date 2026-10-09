@@ -264,9 +264,9 @@ class TestManager:
             if self.capture_manager:
                 if current_case and current_case not in captured:
                     self._capture_case(current_case, captured)
-                zip_path = self.capture_manager.finalize_run()
-                if zip_path:
-                    self.logger.info(f"Captured run data packaged: {zip_path}")
+                run_dir = self.capture_manager.finalize_run()
+                if run_dir:
+                    self.logger.info(f"Run evidence collected: {run_dir}")
 
             # A run that stopped early must not be reported as a run that finished. The
             # application's stop signal only says it stopped - seen once in eight runs on
