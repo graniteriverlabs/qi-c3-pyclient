@@ -1,5 +1,5 @@
 """
-GRL C3 API Client - installable distribution.
+GRLPS C3 API Client - installable distribution.
 
 The public API::
 
@@ -41,7 +41,7 @@ def _validate_runtime() -> None:
     current = "Python {0}.{1}.{2} on {3}".format(
         sys.version_info.major, sys.version_info.minor, sys.version_info.micro, sys.platform)
     raise RuntimeError(
-        "The GRL C3 client requires Windows with Python {0}.{1} or newer, because it starts and "
+        "The GRLPS C3 client requires Windows with Python {0}.{1} or newer, because it starts and "
         "drives the C3 desktop applications. Current runtime: {2}.".format(
             _MIN_PYTHON[0], _MIN_PYTHON[1], current))
 

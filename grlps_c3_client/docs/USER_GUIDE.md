@@ -1,4 +1,4 @@
-# GRL C3 Python Client — User Guide
+# GRLPS C3 Python Client — User Guide
 
 Every method, what it takes, and what it returns.
 
@@ -45,8 +45,8 @@ The README covers installing and the first run. This guide is the reference you 
 |---|---|
 | OS | Windows |
 | Python | 3.11 or newer, enforced at import |
-| Software | the GRL C3 application, installed and licensed |
-| Hardware | a reachable GRL C3 tester |
+| Software | the GRLPS C3 application, installed and licensed |
+| Hardware | a reachable GRLPS C3 tester |
 
 One install drives four applications:
 
@@ -545,7 +545,7 @@ The client requires Windows and CPython 3.11 or newer. Check with `python -V`.
 The path is relative and resolved against the directory you are in. Run from your workspace, pass
 an absolute path, or set `GRL_C3_PROJECT_ROOT`.
 
-**`No GRL C3 workspace in: ...`**
+**`No GRLPS C3 workspace in: ...`**
 `c3-init` has not been run in this folder.
 
 **`The exerciser sequence for ... is missing`**

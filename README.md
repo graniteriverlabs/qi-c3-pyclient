@@ -1,4 +1,4 @@
-# GRL C3 Python Client
+# GRLPS C3 Python Client
 
 Python client for the **GRL Platform Solutions C3** wireless-charging test systems. It drives the C3
 applications over their local API: start the application, connect to the tester, load a device
@@ -31,8 +31,8 @@ with GRLApiClient() as client:        # starts the application and connects the 
 |---|---|
 | OS | Windows |
 | Python | 3.11 or newer (checked at install and at import) |
-| Software | the GRL C3 application you want to drive, installed and licensed |
-| Hardware | a reachable GRL C3 tester |
+| Software | the GRLPS C3 application you want to drive, installed and licensed |
+| Hardware | a reachable GRLPS C3 tester |
 
 ### Install
 
@@ -626,7 +626,7 @@ The client requires Windows and CPython 3.11 or newer. Check with `python -V`.
 **`no matching distribution found`**
 Your Python is older than 3.11. The package declares `requires-python = ">=3.11"`.
 
-**`No GRL C3 workspace in: ...`**
+**`No GRLPS C3 workspace in: ...`**
 `c3-init` has not been run here. Run it, or point `GRL_C3_PROJECT_ROOT` at an initialised folder.
 
 **`No configuration file at: ...`**

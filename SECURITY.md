@@ -7,7 +7,7 @@ issue. We will acknowledge your report and tell you what we intend to do about i
 
 ## What this client handles
 
-The client talks to a GRL C3 application over HTTP on the local machine, and to a tester on
+The client talks to a GRLPS C3 application over HTTP on the local machine, and to a tester on
 your own network. It does not send anything to GRL Platform Solutions.
 
 Two things worth knowing when you share files from a run:

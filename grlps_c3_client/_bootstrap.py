@@ -1,5 +1,5 @@
 """
-Workspace resolution for the pip-installed GRL C3 client.
+Workspace resolution for the pip-installed GRLPS C3 client.
 
 The client reads its bench inputs and writes its logs, reports and captures under a project root.
 Installed with pip the code lives in ``site-packages``, which is often read-only and is never where
@@ -349,7 +349,7 @@ def require_workspace() -> Path:
     workspace = resolve_workspace()
     if not is_initialised(workspace):
         raise SystemExit(
-            "No GRL C3 workspace in:\n"
+            "No GRLPS C3 workspace in:\n"
             "  {0}\n\n"
             "Run 'c3-init' in this directory first, or point GRL_C3_PROJECT_ROOT at a directory\n"
             "you have already initialised.".format(workspace))
@@ -364,7 +364,7 @@ def docs_dir() -> Path:
 def describe_workspace() -> str:
     """Human-readable summary of the resolved workspace and its contents."""
     workspace = resolve_workspace()
-    lines = ["GRL C3 client workspace: {0}".format(workspace), ""]
+    lines = ["GRLPS C3 client workspace: {0}".format(workspace), ""]
 
     config = config_path(workspace)
     lines.append("  {0:<34} {1}".format("grl_config.json",
@@ -436,7 +436,7 @@ def main() -> int:
     """Console entry point: create or update the workspace here, and report what it contains."""
     parser = argparse.ArgumentParser(
         prog="c3-init",
-        description="Create a GRL C3 workspace in this directory, or update an existing one. "
+        description="Create a GRLPS C3 workspace in this directory, or update an existing one. "
                     "Run it again after upgrading: settings the new version adds are merged into "
                     "your configuration and missing files are restored, without changing anything "
                     "you have set.")

@@ -1,5 +1,5 @@
 """
-Internal implementation of the GRL C3 client - not a public API.
+Internal implementation of the GRLPS C3 client - not a public API.
 
 The modules below keep their original top-level names (``API``, ``client``, ``utils``) because they
 import one another by those names. They are bundled here, and this directory is placed on

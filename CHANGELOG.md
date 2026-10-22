@@ -4,7 +4,7 @@
 
 First release.
 
-- Drives all four GRL C3 applications from one install: MPP-TPR, TPT in its MPP firmware,
+- Drives all four GRLPS C3 applications from one install: MPP-TPR, TPT in its MPP firmware,
   C3-TPR, and TPT in its BPP/EPP firmware. The application is chosen per run with `--app`
   or by `Selected_app`, without editing anything else.
 - REST and WebSocket builds are detected automatically.
