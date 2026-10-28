@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# A workspace created by c3-init inside a checkout
+logs/
+Run_time_files/
+Runtime_Capture/
+Test_Case_List_From_System/
