@@ -65,7 +65,9 @@ def _applicable_cases(client) -> Optional[List[str]]:
 
 def main(config_file_path: str = "grl_config.json",
          app: Optional[str] = None,
-         out: Optional[str] = None) -> Dict[str, Any]:
+         out: Optional[str] = None,
+         app_host: Optional[str] = None,
+         open_and_close_app: Optional[bool] = None) -> Dict[str, Any]:
     """
     Fetch the applicable cases and return them.
 
@@ -73,19 +75,31 @@ def main(config_file_path: str = "grl_config.json",
         config_file_path: the configuration file to use
         app: which application to drive, overriding ``Selected_app`` for this run
         out: also write the list to this path as JSON
+        app_host: the PC the application runs on, overriding ``app_host``
+        open_and_close_app: overriding ``open_and_close_app`` - True opens the application here
+            and closes it at the end, False uses the one already open and leaves it open
 
     Returns:
         ``{"launched", "connected", "application", "cases", "listing"}``. A step that never
         happened leaves its key out.
     """
     outcome: Dict[str, Any] = {"launched": False, "connected": False}
-    client = GRLApiClient(config_file_path=config_file_path, app=app)
+    client = GRLApiClient(config_file_path=config_file_path, app=app, app_host=app_host,
+                          open_and_close_app=open_and_close_app)
 
     try:
         if not client.launch_app():
-            print("Failed to launch GRL application.")
+            # The full reason is logged once, as an ERROR just above.
+            if client.launch_error:
+                outcome["error"] = client.launch_error
+                print("Failed to launch GRL application - the reason is the ERROR message above.")
+            else:
+                print("Failed to launch GRL application.")
             return outcome
         outcome["launched"] = True
+        if client.app_left_open:
+            print("Using the application already open at {0} - it stays open.".format(
+                client.app_manager.base_url))
 
         connection_result = client.connect()
         if "error" in connection_result:

@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional
 from client.grl_api_client import GRLApiClient
 from client.modules import run_preflight
 from client.modules.exerciser_manager import _stdin_is_interactive
+from utils import app_control
 
 
 def _preflight(client: GRLApiClient, run_mode: str, esdf: Optional[str],
@@ -34,7 +35,8 @@ def _preflight(client: GRLApiClient, run_mode: str, esdf: Optional[str],
     inputs = manager._setup_directories()["json_dir"]
     files = settings.file_map or {}
 
-    items = [run_preflight.tester(app, settings.ip_address, config_file)]
+    items = [run_preflight.application(app_control.resolve_from(settings)),
+             run_preflight.tester(app, settings.ip_address, config_file)]
     if run_mode == "exerciser":
         session = dict(getattr(settings, "exerciser", {}) or {})
         dry = bool(session.get("dry_run")) if dry_run is None else bool(dry_run)
@@ -105,7 +107,9 @@ def main(config_file_path: str = "grl_config.json",
          test_cases: Optional[List[str]] = None,
          sequence_file: Optional[str] = None,
          dry_run: Optional[bool] = None,
-         hold: Optional[float] = None) -> Dict[str, Any]:
+         hold: Optional[float] = None,
+         app_host: Optional[str] = None,
+         open_and_close_app: Optional[bool] = None) -> Dict[str, Any]:
     """
     Run one session and return what happened.
 
@@ -126,6 +130,11 @@ def main(config_file_path: str = "grl_config.json",
         sequence_file: exported exerciser file.   None -> ``files.ExerciserSequenceModel``
         dry_run: compose but send nothing.        None -> ``common.exerciser.dry_run``
         hold: seconds the exerciser runs.         None -> until Enter is pressed
+        app_host: the PC the application runs on. None -> ``app_host`` (default "localhost")
+        open_and_close_app: open the application
+            here and close it at the end (True),
+            or use the one already open and
+            leave it open (False).                None -> ``open_and_close_app`` (default true)
 
     Returns:
         A dict describing how far the run got. A step that never happened is absent, so the
@@ -134,7 +143,8 @@ def main(config_file_path: str = "grl_config.json",
         ``refused`` holds the message when the run was stopped before anything was started.
     """
     outcome: Dict[str, Any] = {"launched": False, "connected": False}
-    client = GRLApiClient(config_file_path=config_file_path, app=app, ip_address=ip_address)
+    client = GRLApiClient(config_file_path=config_file_path, app=app, ip_address=ip_address,
+                          app_host=app_host, open_and_close_app=open_and_close_app)
     run_mode = mode or client.config_manager.run_mode
     outcome["mode"] = run_mode
 
@@ -154,12 +164,22 @@ def main(config_file_path: str = "grl_config.json",
         return outcome
 
     try:
-        # Step 1: Launch the GRL Application
+        # Step 1: Launch the GRL Application (or use the one already open)
         if not client.launch_app():
-            print("Failed to launch GRL application.")
+            # The full reason is logged once, as an ERROR just above (console and log file), and
+            # kept for a script in client.launch_error / outcome["error"].
+            if client.launch_error:
+                outcome["error"] = client.launch_error
+                print("Failed to launch GRL application - the reason is the ERROR message above.")
+            else:
+                print("Failed to launch GRL application.")
             return outcome
         outcome["launched"] = True
-        print("Application launched successfully!")
+        if client.app_left_open:
+            print("Using the application already open at {0} - it stays open after the run.".format(
+                client.app_manager.base_url))
+        else:
+            print("Application launched successfully!")
 
         # Step 2: Connect to Test Equipment
         connection_result = client.connect()
@@ -195,8 +215,16 @@ def main(config_file_path: str = "grl_config.json",
 
     finally:
         # Step 5: Always disconnect at the end
+        left_open = outcome["launched"] and client.app_left_open
+        taken = bool(getattr(getattr(client, "live_transport", None), "control_taken", False))
         client.disconnect()
         print("Disconnected cleanly.")
+        if taken:
+            outcome["control_taken"] = True
+            print("Control was taken back at the bench, so the application was left open for the "
+                  "person using it.")
+        elif left_open:
+            print("The application was left open (open_and_close_app is false).")
 
 
 def cli(config_file_path: str = "grl_config.json",

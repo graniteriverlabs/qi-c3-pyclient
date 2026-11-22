@@ -16,8 +16,10 @@ Configuration (`websocket` block in grl_config.json) can override the decision:
         "poll_ms": 500      # REST polling interval
     }
 
-If WebSocket is chosen but the socket cannot be established, we fall back to REST polling
-rather than failing the run.
+A WebSocket build answers its pop-ups only over the socket, in API mode (see ws_transport). So
+when WebSocket is chosen and the socket cannot be opened, or the application cannot be put in API
+mode, the run is stopped with the reason (ApiModeRefused) instead of falling back to REST polling:
+REST polling cannot answer a WebSocket build's pop-ups, and the run would wait at the first one.
 """
 from typing import Any, Dict, Optional
 from urllib.parse import urlparse
@@ -26,7 +28,7 @@ from API import ApiName
 from .base import LiveTransport
 from .hybrid_transport import HybridLiveTransport
 from .rest_transport import RestLiveTransport, DEFAULT_POLL_MS
-from .ws_transport import WsLiveTransport, WebSocketUnavailable
+from .ws_transport import ApiModeRefused, WsLiveTransport
 
 MODE_AUTO = "auto"
 MODE_WS = "ws"
@@ -76,9 +78,10 @@ def create_live_transport(api_handler, logger, system_state, popup_manager,
                           base_url: Optional[str] = None,
                           websocket_config: Optional[Dict[str, Any]] = None) -> LiveTransport:
     """
-    Build the right transport for this app, with automatic fallback.
+    Build the right transport for this app.
 
-    Never raises on WebSocket failure — it degrades to REST polling so a run always proceeds.
+    Raises ApiModeRefused when the application is a WebSocket build and its socket cannot be
+    opened or API mode cannot be taken - the message says why and what to do.
     """
     config = websocket_config or {}
     mode = str(config.get("mode", MODE_AUTO)).strip().lower()
@@ -97,16 +100,20 @@ def create_live_transport(api_handler, logger, system_state, popup_manager,
 
     def pure_ws() -> LiveTransport:
         if not ws_url:
-            logger.warning("WebSocket selected but no ws_url — using REST polling")
-            return rest()
+            raise ApiModeRefused("The application is a WebSocket build but no WebSocket address "
+                                 "could be worked out from {0!r}. Nothing was started.".format(base_url))
         transport = WsLiveTransport(ws_url, api_handler, logger, system_state, popup_manager)
         try:
             transport.start()
-            logger.info(f"Live data: WebSocket ({ws_url})")
-            return transport
-        except (WebSocketUnavailable, Exception) as e:
-            logger.warning(f"WebSocket failed to start ({e}) — falling back to REST polling")
-            return rest()
+        except ApiModeRefused:
+            raise
+        except Exception as e:
+            raise ApiModeRefused(
+                "Could not open the live-data connection to the application at {0} ({1}). This "
+                "build answers its pop-ups only over that connection, so nothing was started. "
+                "Check that the application is running and reachable.".format(ws_url, e)) from e
+        logger.info(f"Live data: WebSocket ({ws_url})")
+        return transport
 
     # Explicit overrides.
     if mode == MODE_REST:

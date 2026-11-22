@@ -92,15 +92,28 @@ def _checks(workspace: Path, config: Path, name: str, settings: Dict[str, Any]) 
             run_preflight.cases(name, selection)]
 
 
-def _status(workspace: Path, config: Path, name: str, settings: Dict[str, Any]) -> str:
+def _control(config: Path, name: str, settings: Dict[str, Any], common: Optional[Dict[str, Any]]):
+    """open_and_close_app / app_host for this application, as c3-run will read them."""
+    from utils import app_control
+
+    return app_control.resolve(name, settings, common, str(config), settings.get("known_port"))
+
+
+def _status(workspace: Path, config: Path, name: str, settings: Dict[str, Any],
+            common: Optional[Dict[str, Any]] = None) -> str:
     """
     Whether ``c3-run`` can start for this application, as the first thing that would stop it.
 
     Only what can be checked without the application or the tester. "Installed" is reported here
-    but not refused by ``c3-run``, which can still attach to an application already running.
+    but not refused by ``c3-run``, which can still attach to an application already running - and
+    not checked at all when open_and_close_app is false, because then the application is one that
+    is already open, possibly on another PC.
     """
+    control = _control(config, name, settings, common)
+    if control.problems:
+        return "fix open_and_close_app / app_host"
     app_path = (settings.get("app_path") or "").strip()
-    if not app_path or not Path(app_path).is_file():
+    if control.open_and_close and (not app_path or not Path(app_path).is_file()):
         return "application not installed"
     for item in _checks(workspace, config, name, settings):
         if item.status:
@@ -136,7 +149,7 @@ def apps() -> int:
 
     rows = [("*" if name == default else "", name, str(settings.get("known_port") or "?"),
              run_preflight.tester(name, settings.get("ip_address"), str(config)).shown,
-             _status(workspace, config, name, settings))
+             _status(workspace, config, name, settings, data.get("common")))
             for name, settings in sorted(configured.items())]
     headings = ("", "APPLICATION", "PORT", "TESTER", "STATUS")
     widths = [1] + [max(len(row[i]) for row in rows + [headings]) for i in range(1, 4)]
@@ -168,7 +181,9 @@ def apps() -> int:
     else:
         case_lines = [cases.shown]
 
-    details = [("Description file", description.shown), ("Test cases", case_lines[0])]
+    application = run_preflight.application(_control(config, name, settings, data.get("common")))
+    details = [("Application", application.shown), ("Description file", description.shown),
+               ("Test cases", case_lines[0])]
     details.extend(("", more) for more in case_lines[1:])
     details.append(("Exerciser sequence", sequence.shown))
 
@@ -176,6 +191,9 @@ def apps() -> int:
     print("{0} will use".format(name))
     for label, value in details:
         print("  {0:<20} {1}".format(label, value).rstrip())
+    if application.refusal:
+        print()
+        print(application.refusal)
     return 0
 
 

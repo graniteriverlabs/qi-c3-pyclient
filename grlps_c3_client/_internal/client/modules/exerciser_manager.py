@@ -1629,13 +1629,31 @@ class ExerciserManager:
 
     def _collect_capture(self, app_folder: str) -> Optional[str]:
         """
-        Copy the app's exerciser capture folder into Runtime_Capture, like a compliance run.
+        Put the app's exerciser capture folder into Runtime_Capture, like a compliance run.
 
         The app reuses its own Report directory, so a later session would overwrite this evidence.
-        Reporting only — never raises, never fails a session.
+        A build with API mode serves the folder (named by GetStopExerciser) as a ZIP, unpacked to the
+        same place the disk copy used, wherever the package runs (PKG-15); a build without that route
+        is copied from the disk. Reporting only — never raises, never fails a session (PKG-16).
         """
         if self.dry_run or not self.capture_dir:
             return None
+        from . import remote_capture
+
+        name = remote_capture.folder_name(app_folder)
+        got = remote_capture.fetch_folder(self.api_handler, name, self.capture_dir, self.logger) \
+            if name else {"status": None, "error": "no folder name"}
+        if got.get("fetched"):
+            self.logger.info(f"[exerciser] capture downloaded to {got['target']} "
+                             f"({got['file_count']} file(s), {got['bytes']:,} bytes)")
+            return got["target"]
+        if not os.path.isdir(app_folder):
+            # Not on this computer's disk either: the package runs on another computer.
+            self.logger.warning(f"[exerciser] could not download the capture folder {name}: "
+                                f"{got.get('error')}")
+            return None
+        self.logger.info(f"[exerciser] capture folder not downloaded ({got.get('error')}); "
+                         f"copying it from this PC's disk")
         try:
             if not os.path.isdir(app_folder):
                 self.logger.warning(f"[exerciser] capture folder not found on disk: {app_folder}")

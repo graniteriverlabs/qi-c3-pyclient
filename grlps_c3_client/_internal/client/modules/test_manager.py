@@ -10,7 +10,15 @@ from typing import List, Dict, Any, Optional
 
 from API import ApiName
 from ..transport.app_state import read_app_state, is_app_ready, is_app_busy
+from ..transport.ws_transport import ApiModeRefused
 from .data_stall_watch import DataStallWatch
+
+#: PKG-09: what a run says when the person at the bench took control back in the window.
+TAKEN_BACK_MESSAGE = ("Control was taken back at the bench: UI mode was selected in the application "
+                      "window, and the application stopped the running test. What ran is in this "
+                      "run's capture folder. Control is not taken again in this session.")
+#: How long to wait, after a take-back, for the application to go idle before collecting.
+TAKEN_BACK_IDLE_WAIT_S = 120.0
 
 
 def _normalise_case(name: Any) -> str:
@@ -89,6 +97,10 @@ class TestManager:
         """
         self.capture_manager = capture_manager
 
+    def _control_taken(self) -> bool:
+        """True once the person at the bench took control back from this client (API mode)."""
+        return bool(getattr(self.live_transport, "control_taken", False))
+
     # Test-status tokens that mean a case has finished (used to time per-case capture).
     _TERMINAL_STATUS = ("complete", "finish", "pass", "fail", "abort", "skip", "done")
 
@@ -152,8 +164,15 @@ class TestManager:
         # and on a WebSocket build the app also streams progress and measurements.
         self.stop_requested = False
         popup_thread = None
+        if self._control_taken():
+            # PKG-09: control was taken back at the bench earlier in this session.
+            return {"success": False, "control_taken": True, "error": TAKEN_BACK_MESSAGE}
         if self.live_transport:
-            self.live_transport.start()
+            try:
+                self.live_transport.start()
+            except ApiModeRefused as refused:
+                self.logger.error(str(refused))
+                return {"success": False, "error": str(refused)}
         elif popup_manager:
             popup_manager.start_popup_thread()
             popup_thread = threading.Thread(target=popup_manager._handle_popups, daemon=True)
@@ -208,8 +227,22 @@ class TestManager:
             # while the app is BUSY and no operator pop-up is pending. A data-producing case is
             # never aborted, however long it runs.
             stall = DataStallWatch()
+            taken_at = None
             while self._is_test_running() and not self.stop_requested:
                 now = time.time()
+                if self._control_taken():
+                    # The application is stopping the test because the person at the bench took
+                    # control back. Wait for it to go idle (read over REST) so its report is
+                    # collected, without the stall watchdog - there is no live data any more.
+                    taken_at = taken_at or now
+                    if now - taken_at > TAKEN_BACK_IDLE_WAIT_S:
+                        self.logger.warning(
+                            "Control was taken back at the bench, and the application has not "
+                            "gone idle within {0:.0f} s; collecting what there is.".format(
+                                TAKEN_BACK_IDLE_WAIT_S))
+                        break
+                    time.sleep(0.5)
+                    continue
                 if self.capture_manager:
                     current_case = self._capture_on_boundary(current_case, captured)
                     if current_case and current_case not in captured and (now - last_pkt_poll) >= PKT_POLL_S:
@@ -275,6 +308,9 @@ class TestManager:
             # successfully". Anything built on that message takes an incomplete run for a good
             # one, and nobody looks at it again.
             outcome: Dict[str, Any] = {"success": True, "submitted": len(test_list)}
+            if self._control_taken():
+                outcome["control_taken"] = True
+                self.logger.error(TAKEN_BACK_MESSAGE)
             if self.capture_manager:
                 missing = _cases_not_finished(test_list, captured)
                 outcome["finished"] = len(test_list) - len(missing)

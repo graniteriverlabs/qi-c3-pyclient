@@ -30,6 +30,17 @@ class ApiName(Enum):
     PUT_SELECTED_QI_SPEC_MODE_MPP = "PutSelectedQiSpecMode_MPP"
     GET_WEBSOCKET_SUPPORT = "GetWebSocketSupport"
 
+    # Operation mode (MPP-TPR / MPP-TPT builds with API mode): who controls the application -
+    # its window (UI mode) or a Python client over its WebSocket (API mode).
+    GET_OPERATION_MODE = "GetOperationMode"
+    PUT_API_MODE = "PutApiMode"
+    PUT_UI_MODE = "PutUiMode"
+
+    # Remote capture (same builds): the run's report folder, downloaded as a ZIP, so a run saves
+    # the same files wherever the package runs.
+    GET_CURRENT_REPORT_FOLDER = "GetCurrentReportFolder"
+    GET_REPORT_FOLDER_ZIP = "GetReportFolderZip"
+
     # Test Configuration APIs
     GET_TEST_CASE_LIST = "GetTestCaseList"
     # Profile-scoped variant. C3-TPR (and the TPT BPP/EPP mode) return an EMPTY

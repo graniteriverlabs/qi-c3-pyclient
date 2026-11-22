@@ -121,5 +121,35 @@
         "method": "POST",
         "service": "ReportViewer",
         "endpoint": "PostVerifyESDFJsonSign"
+    },
+    "GetOperationMode": {
+        "method": "GET",
+        "service": "OperationMode",
+        "endpoint": "GetOperationMode",
+        "note": "{mode: UI|API, reason, apiClientId, since}. 404 = a build without API mode."
+    },
+    "PutApiMode": {
+        "method": "PUT",
+        "service": "OperationMode",
+        "endpoint": "PutApiMode",
+        "note": "Body {clientId}: the WebSocket client (connected with ?clientType=api&clientId=) takes control."
+    },
+    "PutUiMode": {
+        "method": "PUT",
+        "service": "OperationMode",
+        "endpoint": "PutUiMode",
+        "note": "Body {clientId}: the client in control hands it back to the application window."
+    },
+    "GetCurrentReportFolder": {
+        "method": "GET",
+        "service": "RemoteCapture",
+        "endpoint": "GetCurrentReportFolder",
+        "note": "{reportRoot, projectFolder, runFolder} of the current or last run."
+    },
+    "GetReportFolderZip": {
+        "method": "GET",
+        "service": "RemoteCapture",
+        "endpoint": "GetReportFolderZip/{name}",
+        "note": "A folder directly under the report root, as one ZIP (binary)."
     }
 }

@@ -29,20 +29,32 @@ with GRLApiClient() as client:        # starts the application and connects the 
 
 | | |
 |---|---|
-| OS | Windows |
+| OS | Windows, or macOS with the application open on a Windows PC — see [Opening and closing the application](#opening-and-closing-the-application) |
 | Python | 3.11 or newer (checked at install and at import) |
 | Software | the GRLPS C3 application you want to drive, installed and licensed |
+| | MPP-TPR and MPP-TPT: a build with API mode — its window shows a "UI mode / API mode" choice at the top right. The client answers the application's pop-ups in API mode, and stops with that reason on an older build |
 | Hardware | a reachable GRLPS C3 tester |
+
+While a run is going, the application's window shows **API mode** and a red **!** icon: the client is
+in control and answers every pop-up. Selecting **UI mode** in the window takes control back — the
+running test stops, and the run ends with `Test Execution STOPPED: control was taken back at the bench`.
 
 ### Install
 
 You do **not** need to clone this repository.
 
 ```powershell
-pip install https://github.com/graniteriverlabs/qi-c3-pyclient/releases/download/v1.0.0/qi_c3_pyclient-1.0.0-py3-none-any.whl
+pip install https://github.com/graniteriverlabs/qi-c3-pyclient/releases/download/v1.1.0/qi_c3_pyclient-1.1.0-py3-none-any.whl
 ```
 
 That is the only install command. It covers both REST and WebSocket builds of the applications.
+
+> **Application without API mode?** If your MPP-TPR or MPP-TPT application has no
+> "UI mode / API mode" choice in its window yet, install 1.0.0 instead:
+>
+> ```powershell
+> pip install https://github.com/graniteriverlabs/qi-c3-pyclient/releases/download/v1.0.0/qi_c3_pyclient-1.0.0-py3-none-any.whl
+> ```
 
 > **Names:** the distribution is `qi-c3-pyclient`; the module you import is `grlps_c3_client`.
 
@@ -306,6 +318,39 @@ To use a workspace from a different folder, point at it:
 set GRL_C3_PROJECT_ROOT=C:\benches\my-bench
 ```
 
+### Opening and closing the application
+
+By default every command opens the application on this PC if it is not running, and closes it
+when it finishes. To use an application that is already open, and leave it open, set this in
+`grl_config.json`:
+
+```json
+"common": {
+  "open_and_close_app": false,
+  "app_host": "localhost"
+}
+```
+
+| Setting | Value | Does |
+|---|---|---|
+| `open_and_close_app` | `true` (default) | open the application on this PC if it is not running; close it at the end |
+| | `false` | use the application that is already open; leave it open at the end |
+| `app_host` | `"localhost"` (default) | the application runs on this PC |
+| | a PC's address, e.g. `"192.0.2.20"` | the application runs on that PC, on its usual port (`known_port`) |
+
+Either setting can also be put under `applications.<application>`, which wins over `common`, or
+passed by a script: `GRLApiClient(app_host="192.0.2.20", open_and_close_app=False)`.
+
+`true` works only on the PC the application is installed on. With `true` and an `app_host` that
+is another PC, the commands stop before anything starts and say what to change. When
+`open_and_close_app` is `false` and nothing answers at `app_host`, the command says which address
+it tried, why it failed, and what to check. `c3-apps` and the summary each command prints show
+which applies:
+
+```
+  Application        already open on 192.0.2.20, port 2004 - left open at the end
+```
+
 ## Exerciser sessions
 
 The exerciser drives the emulator directly instead of running compliance cases.
@@ -523,10 +568,13 @@ relying entirely on the configuration file.
 ### Upgrading
 
 ```powershell
-pip install --upgrade https://github.com/graniteriverlabs/qi-c3-pyclient/releases/download/v1.0.0/qi_c3_pyclient-1.0.0-py3-none-any.whl
+pip install --upgrade https://github.com/graniteriverlabs/qi-c3-pyclient/releases/download/v1.1.0/qi_c3_pyclient-1.1.0-py3-none-any.whl
 cd C:\benches\my-bench
 c3-init
 ```
+
+Upgrading to 1.1.0 needs an MPP-TPR or MPP-TPT application with API mode; without it, stay on
+1.0.0 (see [Install](#install)).
 
 **Run `c3-init` again after upgrading.** A new version can add settings, and your
 `grl_config.json` already exists, so only `c3-init` puts them there. It reports what it added:
@@ -620,8 +668,12 @@ The message names the file and what is wrong with it, for example the line of a 
 The names are not cases the description file allows. Refresh the list with `c3-testcases` and copy
 the names verbatim, or use `["ALL"]`.
 
-**`RuntimeError` about Windows or the Python version at import**
-The client requires Windows and CPython 3.11 or newer. Check with `python -V`.
+**`RuntimeError` about the Python version at import**
+The client requires CPython 3.11 or newer. Check with `python -V` (`python3 -V` on macOS).
+
+**`The package can open and close the application only on the Windows PC it is installed on`**
+Printed with `open_and_close_app` true on a Mac, or with an `app_host` that is another PC. Open it on the Windows PC and set
+`"open_and_close_app": false` and `"app_host": "<the Windows PC's address>"` in `grl_config.json`.
 
 **`no matching distribution found`**
 Your Python is older than 3.11. The package declares `requires-python = ">=3.11"`.

@@ -388,7 +388,18 @@ class WebAppController:
     def is_running(self) -> bool:
         return (self.process and self.process.poll() is None) or self._check_application_running()
 
+    def detach(self) -> None:
+        """
+        Let go of the application without closing it - it is to stay open (the person at the bench
+        took control back in its window). After this, neither stop_process() nor garbage collection
+        touches it.
+        """
+        self._detached = True
+        self.process = None
+
     def __del__(self):
+        if getattr(self, "_detached", False):
+            return
         try:
             self.stop_process()
         except Exception:

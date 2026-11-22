@@ -13,8 +13,11 @@ One install drives all four C3 applications - MPP-TPR, TPT in its MPP firmware, 
 its BPP/EPP firmware. Which one a run uses comes from ``Selected_app`` in the workspace config, or
 from the ``--app`` option on the command line.
 
-Runtime requirement: Windows, and CPython 3.11 or newer. Both are checked at import time so the
-failure names the cause rather than surfacing later as a missing attribute.
+Runtime requirement: CPython 3.11 or newer, checked at import time so the failure names the cause
+rather than surfacing later as a missing attribute. Windows or macOS: the client drives the
+application over HTTP and its WebSocket, so it can run on another computer than the application.
+Only opening and closing the application needs the Windows PC it is installed on
+(``open_and_close_app``); elsewhere the client uses the application already open on ``app_host``.
 """
 from __future__ import annotations
 
@@ -22,7 +25,7 @@ import os
 import sys
 from pathlib import Path
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 _PKG_DIR = Path(__file__).resolve().parent
 _INTERNAL_DIR = _PKG_DIR / "_internal"
@@ -33,16 +36,13 @@ _MIN_PYTHON = (3, 11)
 
 
 def _validate_runtime() -> None:
-    """Refuse an unsupported interpreter or OS with a message that says why."""
-    is_windows = os.name == "nt" or sys.platform.startswith("win")
-    is_supported = sys.version_info[:2] >= _MIN_PYTHON
-    if is_windows and is_supported:
+    """Refuse an unsupported interpreter with a message that says why."""
+    if sys.version_info[:2] >= _MIN_PYTHON:
         return
     current = "Python {0}.{1}.{2} on {3}".format(
         sys.version_info.major, sys.version_info.minor, sys.version_info.micro, sys.platform)
     raise RuntimeError(
-        "The GRLPS C3 client requires Windows with Python {0}.{1} or newer, because it starts and "
-        "drives the C3 desktop applications. Current runtime: {2}.".format(
+        "The GRLPS C3 client requires Python {0}.{1} or newer. Current runtime: {2}.".format(
             _MIN_PYTHON[0], _MIN_PYTHON[1], current))
 
 

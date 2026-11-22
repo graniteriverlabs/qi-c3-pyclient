@@ -61,6 +61,19 @@ def refusals(items: List[Item]) -> List[str]:
     return [item.refusal for item in items if item.refusal]
 
 
+# --------------------------------------------------------------------------- application
+def application(control: Any) -> Item:
+    """
+    Where the application is and whether this run opens and closes it (utils.app_control), or
+    every reason the two settings cannot be used. Reaching the application is checked when the run
+    starts; this only reads the settings.
+    """
+    if control.problems:
+        return Item("Application", "cannot be used as set", status="fix open_and_close_app / app_host",
+                    refusal="\n\n".join(control.problems))
+    return Item("Application", control.describe())
+
+
 # --------------------------------------------------------------------------- tester
 def tester(app: str, address: Optional[str], config_file: str) -> Item:
     """The tester address, or why there is none."""

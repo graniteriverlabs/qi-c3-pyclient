@@ -332,11 +332,25 @@ def unconfigured_warnings(workspace: Path) -> List[str]:
                 "  Set it with:  c3-init --app {0} --tester <address>\n"
                 "  or in:        {2}".format(app_name, PLACEHOLDER_IP, config))
         app_path = app.get("app_path")
-        if app_path and not Path(app_path).is_file():
+        if app_path and _opens_here(data, app_name, app, config) and not Path(app_path).is_file():
             warnings.append(
                 "CHECK: applications.{0}.app_path does not exist on this machine:\n"
                 "  {1}".format(app_name, app_path))
     return warnings
+
+
+def _opens_here(data: Dict[str, Any], app_name: str, app: Dict[str, Any], config: Path) -> bool:
+    """
+    Whether a run would open this application on this computer - the only time its app_path is used.
+
+    Not with open_and_close_app false (the application already open is used, possibly on another PC),
+    and not on a computer that cannot open it (macOS) - a run explains that itself, so warning about
+    a Windows path there is only noise. Decided by the same check a run makes.
+    """
+    from utils import app_control
+
+    control = app_control.resolve(app_name, app, data.get("common"), str(config), app.get("known_port"))
+    return control.open_and_close and not control.problems
 
 
 def require_workspace() -> Path:

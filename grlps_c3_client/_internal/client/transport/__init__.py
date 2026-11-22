@@ -18,7 +18,7 @@ from .hybrid_transport import HybridLiveTransport
 from .popup_coordinator import PopupCoordinator
 from .rest_transport import RestLiveTransport
 from .selector import create_live_transport, supports_websocket, derive_ws_url
-from .ws_transport import WsLiveTransport, WebSocketUnavailable
+from .ws_transport import ApiModeRefused, WsLiveTransport, WebSocketUnavailable
 
 __all__ = [
     "LiveTransport",
@@ -27,6 +27,7 @@ __all__ = [
     "HybridLiveTransport",
     "PopupCoordinator",
     "WebSocketUnavailable",
+    "ApiModeRefused",
     "create_live_transport",
     "supports_websocket",
     "derive_ws_url",

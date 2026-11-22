@@ -22,8 +22,16 @@ READY = "READY"                # idle: app streams nothing
 BUSY_ACTIVE = "BUSY_ACTIVE"    # test running: app streams measurement data
 BUSY_PAUSED = "BUSY_PAUSED"    # test paused
 
-# --- Streams the client subscribes to (client -> server) ---
+# --- Measurement streams the app can push (server -> client) ---
 STREAM_TYPES = ("Packets", "Signals", "PowerChart", "PowerTransferInfo")
+
+# --- Streams the client asks for, with its state (client -> server) ---
+# Exactly the ones the application's own window asks for (ws-message-handlers.js / ws-config.js).
+# In API mode the package is the connection the application takes this state from, so asking for
+# anything more - PowerChart while BUSY - would make the application do what its window never asks
+# it to (PKG-07). The window sends PowerChart only as READY at a test's end, which the application
+# answers with nothing, so it is not sent at all.
+SUBSCRIBE_TYPES = ("Packets", "Signals", "PowerTransferInfo")
 
 # --- Frames the app pushes (server -> client) ---
 MSG_POPUP = "MessagePopupData"

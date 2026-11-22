@@ -50,6 +50,12 @@ class GRLConfigManager:
         self.is_multiple_esdf_files = None
         self.esdf_folder_name = None
         self.websocket_config = {}
+        # The key under "applications" of the active application. open_and_close_app and app_host
+        # are read for it by utils.app_control (applications.<app> first, then common); a script
+        # can override both for one run through GRLApiClient.
+        self.selected_app_key = None
+        self.open_and_close_override = None
+        self.app_host_override = None
 
         # Load configuration when instantiated
         self.load_config()
@@ -161,6 +167,7 @@ class GRLConfigManager:
 
             # Load the selected application configuration
             app_config = available_apps[selected_app]
+            self.selected_app_key = selected_app
             self.app_name = app_config.get("app_name")
             self.app_path = app_config.get("app_path")
             self.known_port = app_config.get("known_port")

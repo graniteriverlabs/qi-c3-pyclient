@@ -514,6 +514,13 @@ class ProjectManager:
                     # ends before every selected case has a verdict is reported as what it
                     # is, so no caller can read an incomplete run as a successful one.
                     incomplete = result.get("incomplete") or []
+                    if result.get("control_taken") and incomplete:
+                        message = ("Test Execution STOPPED: control was taken back at the bench "
+                                   "(UI mode was selected in the application window) - {0} of {1} "
+                                   "selected case(s) never reached a verdict".format(
+                                       len(incomplete), result.get("submitted", "?")))
+                        self.logger.error(message)
+                        return [message]
                     if incomplete:
                         message = ("Test Execution INCOMPLETE: {0} of {1} selected case(s) "
                                    "never reached a verdict".format(
@@ -524,6 +531,10 @@ class ProjectManager:
                     return ["Test Execution completed"]
                 else:
                     error_message = result.get("error", "Unknown error occurred during test execution")
+                    if result.get("control_taken"):
+                        message = "Test Execution STOPPED: " + error_message
+                        self.logger.error(message)
+                        return [message]
                     self.logger.error(f"Test Execution failed: {error_message}")
                     return [f"Test Execution failed: {error_message}"]
 

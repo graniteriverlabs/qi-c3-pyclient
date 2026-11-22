@@ -14,7 +14,7 @@ from .core.client_config import ClientConfig
 from .core.api_interface import ApiInterface
 from .core.legacy_managers import LegacyManagers
 from .modules.app_manager import AppManager
-from .transport import LiveTransport, create_live_transport
+from .transport import ApiModeRefused, LiveTransport, create_live_transport
 
 
 class GRLApiClient:
@@ -41,7 +41,9 @@ class GRLApiClient:
 
     def __init__(self, config_file_path: str = "grl_config.json",
                  app: Optional[str] = None,
-                 ip_address: Optional[str] = None) -> None:
+                 ip_address: Optional[str] = None,
+                 app_host: Optional[str] = None,
+                 open_and_close_app: Optional[bool] = None) -> None:
         """
         Initialize the GRL API client with configuration.
 
@@ -54,6 +56,13 @@ class GRLApiClient:
                 and paths as they are created.
             ip_address: The tester to talk to, overriding this application's ``ip_address``.
                 Useful when one script drives several benches.
+            app_host: The PC the application runs on, overriding ``app_host`` in the
+                configuration: "localhost", or another PC's address such as "192.0.2.20".
+            open_and_close_app: True - open the application on this PC if it is not running and
+                close it at the end. False - use the application already open (here or on
+                ``app_host``) and leave it open. Overrides ``open_and_close_app`` in the
+                configuration. True is refused on macOS and with an ``app_host`` that is another
+                PC; ``launch_app()`` then returns False and ``launch_error`` says why.
         """
         # Initialize configuration
         self.config = ClientConfig(config_file_path)
@@ -74,6 +83,14 @@ class GRLApiClient:
             # diagnostics, logging - sees one address and there is no second source of truth.
             self.config.config_manager.ip_address = ip_address
             self.logger.info(f"Tester address for this run: {ip_address}")
+
+        # Checked, with everything else about them, when the application is reached - so a wrong
+        # value is reported in full by launch_app() and by the commands' summary, not as an
+        # exception here.
+        if app_host is not None:
+            self.config.config_manager.app_host_override = app_host
+        if open_and_close_app is not None:
+            self.config.config_manager.open_and_close_override = open_and_close_app
 
         # Initialize direct managers
         self.app_manager = AppManager(self.config.config_manager, self.logger)
@@ -217,9 +234,16 @@ class GRLApiClient:
 
                     self.logger.info("✅ All legacy managers configured with API handler")
 
-                    # Step 6: Choose how we receive live data from THIS app build.
-                    # Asks the app whether it serves a WebSocket; falls back to REST polling.
-                    self._setup_live_transport(api_handler)
+                    # Step 6: Choose how we receive live data from THIS app build. On a
+                    # WebSocket build this also takes API mode, so the package answers the
+                    # pop-ups; a build that cannot be put in API mode stops here, before any
+                    # tester or test is touched (PKG-03).
+                    try:
+                        self._setup_live_transport(api_handler)
+                    except ApiModeRefused as refused:
+                        self.app_manager.last_error = str(refused)
+                        self.logger.error(str(refused))
+                        return False
                     return True
                 else:
                     self.logger.error("❌ Failed to initialize API interface")
@@ -230,6 +254,24 @@ class GRLApiClient:
         else:
             self.logger.error("❌ Failed to launch application")
             return False
+
+    @property
+    def launch_error(self) -> Optional[str]:
+        """
+        Why the last ``launch_app()`` returned False, in full: which setting, what it holds, where it
+        was set and what to change. None when it succeeded or has not been called.
+        """
+        # Read through __dict__: a missing attribute would otherwise go to __getattr__, which
+        # forwards to the managers and recurses on a client that was never fully built.
+        return getattr(self.__dict__.get("app_manager"), "last_error", None)
+
+    @property
+    def app_left_open(self) -> bool:
+        """True when this client uses an application it will leave open (open_and_close_app false)."""
+        manager = self.__dict__.get("app_manager")
+        control = getattr(manager, "control", None)
+        return bool(control is not None and not control.open_and_close
+                    and getattr(manager, "base_url", None))
 
     def _setup_live_transport(self, api_handler) -> None:
         """
@@ -426,6 +468,11 @@ class GRLApiClient:
             return
         self._disconnected = True
         self.logger.info("Disconnecting from GRL application...")
+
+        # If the person at the bench took control back in the window, the application is theirs
+        # now: it is not closed under them, even when this client opened it.
+        if getattr(self.live_transport, "control_taken", False):
+            self.app_manager.leave_open_reason = "control was taken back at the bench"
 
         # Stop receiving live data first, so no thread outlives the session.
         if self.live_transport:
@@ -645,7 +692,10 @@ class GRLApiClient:
             GRLApiClient: Self for use in with statement
         """
         if not self.launch_app():
+            reason = self.launch_error
             self.disconnect()
+            if reason:
+                raise RuntimeError(reason)
             raise RuntimeError("The application did not start. The reason is in the log: "
                                "{0}".format(os.path.abspath(self.config.log_manager.log_filename)))
         result = self.connect()

@@ -235,7 +235,68 @@ class DataCaptureManager:
 
     def _capture_app_reports(self) -> None:
         """
-        Copy the report folder this run produced into the capture, reports and all.
+        Put the report folder this run produced into the capture, reports and all.
+
+        A build with API mode names the run's folder itself (RemoteCapture/GetCurrentReportFolder) and
+        serves it as a ZIP, which is unpacked to `application_report/<folder>/` - the same place and files
+        the disk copy gives, and it works wherever the package runs (PKG-13/14). The folder is the one the
+        application reports for this run, not one picked by file times, so a different clock on the
+        package's computer does not matter. A build without those routes is copied from the disk as before.
+
+        Reporting only. A failure here never fails a run, but it is always said out loud (PKG-16).
+        """
+        if not self.run_dir:
+            return
+        from . import remote_capture
+
+        where = remote_capture.report_folder_when_written(self.api_handler, logger=self.logger)
+        if not where.get("available"):
+            self._copy_app_reports_from_disk()
+            return
+        name = where.get("projectFolder")
+        root = where.get("reportRoot")
+        if not name:
+            reason = where.get("error") or "the application reports no report folder for this run"
+            self.summary["app_reports"] = {"captured": False, "via": "download", "reason": reason,
+                                           "report_root": root}
+            self.logger.warning(f"[capture] no report was collected: {reason}. Its report location "
+                                f"is: {root or 'unknown'}")
+            return
+
+        parent = os.path.join(self.run_dir, "application_report")
+        got = remote_capture.fetch_folder(self.api_handler, name, parent, self.logger)
+        if not got.get("fetched"):
+            local = os.path.join(root, name) if root else None
+            if local and os.path.isdir(local):
+                # Same PC: the folder the application named is on this disk - copy that one.
+                self.logger.info(f"[capture] report folder not downloaded ({got.get('error')}); "
+                                 f"copying {local} from this PC's disk")
+                self._copy_report_folder(local, via="disk copy of the folder the application named")
+                return
+            self.summary["app_reports"] = {"captured": False, "via": "download", "folder": name,
+                                           "report_root": root, "reason": got.get("error")}
+            self.logger.warning(f"[capture] could not download the application's report folder "
+                                f"{name}: {got.get('error')}")
+            return
+        files = [os.path.relpath(os.path.join(r, f), self.run_dir)
+                 for r, _d, fs in os.walk(got["target"]) for f in fs]
+        self.summary["app_reports"] = {
+            "captured": True, "via": "download", "source": f"{root}\\{name}" if root else name,
+            "copied_to": os.path.relpath(got["target"], self.run_dir),
+            "file_count": len(files), "bytes": got.get("bytes", 0),
+            "skipped": got.get("skipped", 0),
+            "reports": sorted(f for f in files if f.lower().endswith((".pdf", ".html", ".json"))),
+        }
+        self.logger.info(
+            "[capture] downloaded the application's own report folder: {0} file(s), {1:,} bytes "
+            "({2}){3}".format(len(files), got.get("bytes", 0), name,
+                              f", {got['skipped']} file(s) the application could not read"
+                              if got.get("skipped") else ""))
+
+    def _copy_app_reports_from_disk(self) -> None:
+        """
+        Copy the report folder this run produced into the capture, reports and all - for a build
+        without the RemoteCapture routes, which only works on the PC the application runs on.
 
         Picks the run's folder by write time rather than by name: the application truncates the
         project name into its folder name (`live-verify_202_V231_081026_132349`), so the name
@@ -277,6 +338,10 @@ class DataCaptureManager:
             return
 
         when, source = max(candidates)
+        self._copy_report_folder(source)
+
+    def _copy_report_folder(self, source: str, via: Optional[str] = None) -> None:
+        """Copy one report folder from this PC's disk to `application_report/<its name>/`."""
         target = os.path.join(self.run_dir, "application_report",
                               os.path.basename(source.rstrip("\\/")))
         try:
@@ -291,6 +356,8 @@ class DataCaptureManager:
                 "reports": sorted(f for f in files if f.lower().endswith(
                     (".pdf", ".html", ".json"))),
             }
+            if via:
+                self.summary["app_reports"]["via"] = via
             self.logger.info(
                 "[capture] collected the application's own report folder: {0} file(s), "
                 "{1:,} bytes from {2}".format(len(files), size, source))

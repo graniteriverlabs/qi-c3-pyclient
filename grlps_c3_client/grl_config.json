@@ -1,5 +1,8 @@
 {
     "common": {
+        "open_and_close_app": true,
+        "app_host": "localhost",
+        "_app_comment": "open_and_close_app true: the package opens the application on this PC if it is not running and closes it after the run. false: the package uses the application that is already open - on this PC or on the PC named by app_host - and leaves it open; use false on macOS, where the package cannot open or close the Windows application. app_host: 'localhost', or the address of the Windows PC the application runs on (no http://, no port - the port is the application's known_port). Both can be set per application under applications.<app>, which wins.",
         "initial_wait": 10,
         "default_log_mode": "a",
         "max_connection_attempts": 3,
