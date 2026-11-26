@@ -47,7 +47,7 @@ the same in both versions, so the [Quickstart](#quickstart) steps are the same t
 
 | Part | What is in it |
 |---|---|
-| **[Getting started](#getting-started)** | [Requirements](#requirements) · [Install](#install) · [Quickstart](#quickstart) — a bench from nothing to a finished run · [From a Mac or another PC](#from-a-mac-or-another-pc) |
+| **[Getting started](#getting-started)** | [Requirements](#requirements) · [Bench setup](#bench-setup) · [Install](#install) · [Quickstart](#quickstart) — a bench from nothing to a finished run · [From a Mac or another PC](#from-a-mac-or-another-pc) |
 | **[Running tests](#running-tests)** | [Commands](#commands) · [Where your results are](#where-your-results-are) · [more than one application](#working-with-more-than-one-application) · [Opening and closing the application](#opening-and-closing-the-application) · [API mode](#api-mode) |
 | **[Exerciser sessions](#exerciser-sessions)** | driving the emulator directly instead of running test cases |
 | **[The Python API](#the-python-api)** | the same steps as library calls, for your own scripts |
@@ -65,6 +65,29 @@ the same in both versions, so the [Quickstart](#quickstart) steps are the same t
 | Software | the GRLPS C3 application you want to drive, installed and licensed | the same |
 | | MPP-TPR and MPP-TPT WebSocket builds: a build with **API mode** (a "UI mode / API mode" choice at the top right of its window). On a WebSocket build without it the client stops before anything starts, and says why | any build |
 | Hardware | a GRLPS C3 tester the application can reach | the same |
+
+### Bench setup
+
+The application runs on a Windows PC that reaches the tester over the local network, with the DUT on
+the tester coil. The client runs on one of two computers:
+
+| Setup | The client runs on | Versions |
+|---|---|---|
+| [Setup 1](#setup-1-client-on-the-windows-pc-that-runs-the-application) | the Windows PC that runs the application | 1.0.0 and 1.1.0 |
+| [Setup 2](#setup-2-client-on-a-mac-or-another-windows-pc) | a Mac or another Windows PC, reaching that PC over the local network | 1.1.0 (beta) |
+
+#### Setup 1: client on the Windows PC that runs the application
+
+![Setup 1: the Python client and the application on one Windows PC, which reaches the C3 tester over the local network](docs/images/setup-1-same-windows-pc.png)
+
+Shown with MPP-TPR / MPP-TPT; every application is set up the same way. The [Quickstart](#quickstart)
+below uses this setup.
+
+#### Setup 2: client on a Mac or another Windows PC
+
+![Setup 2: the application on the bench PC, which reaches the C3 tester; the Python client on a Mac or another Windows PC, which reaches the application over the local network](docs/images/setup-2-remote-client.png)
+
+The steps and settings are in [From a Mac or another PC](#from-a-mac-or-another-pc).
 
 ### Install
 
@@ -262,7 +285,8 @@ Mac, or on another PC, and reaches the application over the network. The
 | Talks to the tester | yes — the application connects to it | no |
 | Holds | the application's own report folders | your workspace: settings, description files, test-case selection, and the reports and logs of every run |
 
-Tested from a Mac with MPP-TPR and MPP-TPT builds with API mode.
+The layout is shown in [Setup 2](#setup-2-client-on-a-mac-or-another-windows-pc). Tested from a Mac
+with MPP-TPR and MPP-TPT builds with API mode.
 
 #### On the bench PC
 
@@ -891,6 +915,7 @@ together they show every call the client made and what came back.
 | [User guide](grlps_c3_client/docs/USER_GUIDE.md) | 1.1.0 (beta): every method, its inputs and what it returns, the workspace, and troubleshooting |
 | [README for 1.0.0](https://github.com/graniteriverlabs/qi-c3-pyclient/blob/v1.0.0/README.md) · [user guide for 1.0.0](https://github.com/graniteriverlabs/qi-c3-pyclient/blob/v1.0.0/grlps_c3_client/docs/USER_GUIDE.md) | 1.0.0 (stable) |
 | [Changelog](CHANGELOG.md) | what changed in each version |
+| [Setup diagrams](docs/images/) | [Setup 1](docs/images/setup-1-same-windows-pc.png): client on the Windows PC that runs the application · [Setup 2](docs/images/setup-2-remote-client.png): client on a Mac or another Windows PC |
 
 The guide for the installed version ships inside the package. Find it with:
 
