@@ -4,6 +4,9 @@ Every method, what it takes, and what it returns.
 
 The README covers installing and the first run. This guide is the reference you come back to.
 
+**This guide is for 1.1.0 (beta).** 1.0.0 is the stable release; its guide ships inside the 1.0.0
+package. The README's "Versions" section says which to use and what 1.1.0 changes.
+
 ---
 
 ## Contents
@@ -15,11 +18,13 @@ The README covers installing and the first run. This guide is the reference you 
 - [The workspace](#the-workspace)
 - [Upgrading a workspace](#upgrading-a-workspace)
 - [Configuration](#configuration)
+- [Where the application runs](#where-the-application-runs)
+- [API mode](#api-mode)
 
 **[The API](#the-api)**
 
 - [Call order](#call-order)
-- [`GRLApiClient(config_file_path, app, ip_address)`](#grlapiclientconfig_file_path-app-ip_address)
+- [`GRLApiClient(config_file_path, app, ip_address, app_host, open_and_close_app)`](#grlapiclientconfig_file_path-app-ip_address-app_host-open_and_close_app)
 - [`with GRLApiClient(...) as client`](#with-grlapiclient-as-client)
 - [`launch_app()`](#launch_app)
 - [`connect(ip_address=None)`](#connectip_addressnone)
@@ -43,10 +48,11 @@ The README covers installing and the first run. This guide is the reference you 
 
 | | |
 |---|---|
-| OS | Windows |
+| OS | Windows; or macOS, with the application open on a Windows PC — see [Where the application runs](#where-the-application-runs) |
 | Python | 3.11 or newer, enforced at import |
 | Software | the GRLPS C3 application, installed and licensed |
-| Hardware | a reachable GRLPS C3 tester |
+| | MPP-TPR and MPP-TPT WebSocket builds: a build with API mode, whose window shows a "UI mode / API mode" choice at the top right — see [API mode](#api-mode) |
+| Hardware | a GRLPS C3 tester the application can reach |
 
 One install drives four applications:
 
@@ -183,6 +189,8 @@ even by `--force`, which only replaces the files the package ships.
 
 | Key | Meaning |
 |---|---|
+| `open_and_close_app` | `true` (default): open the application on this PC if it is not running, and close it at the end. `false`: use the application that is already open, and leave it open. Can also be set per application, which wins |
+| `app_host` | `"localhost"` (default), or the address of the Windows PC the application runs on — no `http://`, no port. Can also be set per application, which wins |
 | `run_mode` | `compliance` or `exerciser`. The commands state their own mode and ignore this; `sample_run.main()` uses it when no mode is passed |
 | `exerciser.steps` | which settings to apply, in order |
 | `exerciser.verify` | `strict`, `warn` or `off` |
@@ -190,6 +198,59 @@ even by `--force`, which only replaces the files the package ships.
 | `exerciser.stop_on_error` | stop the session at the first failed step |
 | `exerciser.channels` | which live measurements to record |
 | `trace_http` | write an HTTP trace beside the log |
+
+---
+
+### Where the application runs
+
+Two settings say where the application is and who opens it. Put them under `common`, or under
+`applications.<application>`, which wins. A script can pass them to `GRLApiClient`, which wins
+over both.
+
+| `open_and_close_app` | `app_host` | The client |
+|---|---|---|
+| `true` (default) | `"localhost"` (default) | opens the application on this PC if it is not running, and closes it at the end — as in 1.0.0 |
+| `false` | `"localhost"` | uses the application already open on this PC, and leaves it open |
+| `false` | another PC's address, e.g. `"192.0.2.20"` | uses the application already open on that PC, on its `known_port`, and leaves it open |
+| `true` | another PC's address | refused before anything starts: the client can open and close the application only on the PC it is installed on |
+
+On macOS, `open_and_close_app` must be `false` and `app_host` the bench PC's address.
+
+The tester address (`ip_address`) is always the address **the application** uses to reach the
+tester, wherever the client runs.
+
+Every command prints which of these applies before it starts:
+
+```
+  Application          already open on 192.0.2.20, port 2004 - left open at the end
+```
+
+When the application cannot be reached, nothing starts, and the message says which address was
+tried, why it failed and what to check.
+
+---
+
+### API mode
+
+On MPP-TPR and MPP-TPT WebSocket builds, the client takes control of the application over its
+WebSocket and answers every pop-up there. Nothing is configured: `launch_app()` switches the
+application to API mode, and `disconnect()` gives control back to the window (UI mode).
+
+| In the application's window | Means |
+|---|---|
+| **API mode** and a red **!** icon at the top right | the client is in control |
+| pop-ups that show and close by themselves | the client answered them |
+| **UI mode** selected by someone at the bench | control is taken back: the running test stops, `run_compliance()` returns `["Test Execution STOPPED: control was taken back at the bench ..."]`, and the application is left open |
+
+API mode is refused, and nothing starts, when:
+
+| Situation | `launch_error` begins |
+|---|---|
+| the build has no API mode | `This application build has no API mode` |
+| another Python client is in control | `Another Python client is already controlling the application` |
+| a test or exerciser session was started from the window | `The application is busy` |
+
+REST builds answer their pop-ups over REST, as in 1.0.0, and need no API mode.
 
 ---
 
@@ -216,7 +277,7 @@ block only holds the run itself.
 
 ---
 
-### `GRLApiClient(config_file_path, app, ip_address)`
+### `GRLApiClient(config_file_path, app, ip_address, app_host, open_and_close_app)`
 
 Builds the client. Starts nothing.
 
@@ -225,6 +286,8 @@ Builds the client. Starts nothing.
 | `config_file_path` | `"grl_config.json"` | the configuration file. Relative paths resolve against the current directory |
 | `app` | `None` | which application to drive. `None` uses `Selected_app` |
 | `ip_address` | `None` | the tester. `None` uses that application's configured address |
+| `app_host` | `None` | the PC the application runs on: `"localhost"` or another PC's address. `None` uses the configured `app_host` |
+| `open_and_close_app` | `None` | `True` opens and closes the application on this PC; `False` uses the one already open and leaves it open. `None` uses the configured value — see [Where the application runs](#where-the-application-runs) |
 
 ```python
 from grlps_c3_client import GRLApiClient
@@ -232,6 +295,9 @@ from grlps_c3_client import GRLApiClient
 client = GRLApiClient()                                   # config file, Selected_app
 client = GRLApiClient(app="GRL-WP-TPR-C3")                # a named application
 client = GRLApiClient(app="GRL-C3-MP-TPR", ip_address="192.0.2.77")   # one script, two benches
+client = GRLApiClient(app="GRL-C3-TPT-MPP",               # the application already open
+                      app_host="192.0.2.20",              # on the bench PC, from a Mac
+                      open_and_close_app=False)
 ```
 
 **Raises** `FileNotFoundError` if the configuration file is not there, naming the path it looked at
@@ -243,7 +309,8 @@ directory. **Raises** `ValueError` for an unknown `app`, listing the configured 
 ### `with GRLApiClient(...) as client`
 
 Starts the application and connects the tester on entry; disconnects and closes the application on
-exit — normally or through an exception.
+exit — normally or through an exception. With `open_and_close_app` false, entry uses the
+application already open and exit leaves it open.
 
 ```python
 with GRLApiClient(app="GRL-C3-MP-TPR", ip_address="192.0.2.77") as client:
@@ -258,19 +325,23 @@ connect, saying which and why. Everything is closed again first, and the block d
 ### `launch_app()`
 
 Starts the application if it is not already running, waits for its port, reads its software version
-and decides the transport.
+and decides the transport. With `open_and_close_app` false it starts nothing: it reaches the
+application already open at `app_host`.
 
-**Input:** none. Uses `app_path` and `known_port`.
+**Input:** none. Uses `app_path`, `known_port`, `open_and_close_app` and `app_host`.
 
-**Returns** `True` when the application is serving, `False` otherwise.
+**Returns** `True` when the application is serving, `False` otherwise. After `False`,
+`client.launch_error` says why in full — which setting, what it holds and what to change.
 
 ```python
 if not client.launch_app():
-    raise SystemExit("could not start the application")
+    raise SystemExit(client.launch_error or "could not start the application")
 ```
 
 The transport is chosen here, not configured: the client asks the application whether it supports
-WebSocket and uses REST when it does not.
+WebSocket and uses REST when it does not. On an MPP-TPR or MPP-TPT WebSocket build this is also
+where the client takes [API mode](#api-mode); when the application refuses it, `launch_app()`
+returns `False` before the tester is touched.
 
 ---
 
@@ -318,6 +389,7 @@ under its earlier name, and takes the same arguments.
 |---|---|
 | `["Test Execution completed"]` | every selected case reached a verdict |
 | `["Test Execution INCOMPLETE: N of M selected case(s) never reached a verdict"]` | the application stopped early; the cases that never finished are named in the log |
+| `["Test Execution STOPPED: control was taken back at the bench (UI mode was selected in the application window) - N of M selected case(s) never reached a verdict"]` | someone selected UI mode in the window during the run; the running test was stopped and the application left open |
 | `["Test Execution did not start: no project was created. ..."]` | refused before anything ran — the description file could not be verified, its power profile could not be read, or the licence does not cover the profile. The reason is logged |
 | `["Test Execution did not start: none of the N selected test case(s) is allowed by ..."]` | no selected name is a case the description file allows |
 | `["No test cases selected for ..."]` | the selection was empty. Nothing was sent to the application |
@@ -417,9 +489,13 @@ The `hold` record in `results` says how it ended: `reason` is, for example, `hol
 
 ### `disconnect()`
 
-Stops live data, closes the HTTP session, and shuts the application down. Safe to call more than
-once. **Always call it in a `finally`** — or use `with GRLApiClient(...)`, which does — or the
-application is left running and the next run finds the port occupied.
+Gives control back to the window (UI mode) when the client was in API mode, stops live data, closes
+the HTTP session, and shuts the application down. Safe to call more than once. **Always call it in
+a `finally`** — or use `with GRLApiClient(...)`, which does — or the application is left running
+and the next run finds the port occupied.
+
+The application is **left open** instead when `open_and_close_app` is false, and when control was
+taken back at the bench during the session.
 
 ---
 
@@ -538,8 +614,27 @@ that is not a name, or `"ALL"` given together with case names. Nothing was start
 The session was started where nobody can press Enter — a scheduled task, or input redirected from
 `NUL`. Pass `hold=SECONDS`, run it from a terminal, or set `common.exerciser.dry_run`.
 
-**`RuntimeError` about Windows or the Python version at import**
-The client requires Windows and CPython 3.11 or newer. Check with `python -V`.
+**`RuntimeError` about the Python version at import**
+The client requires CPython 3.11 or newer. Check with `python -V` (`python3 -V` on macOS).
+
+**`The package can open and close the application only on the Windows PC it is installed on`**
+`open_and_close_app` is true on macOS, or with an `app_host` that is another PC. Open the
+application on the Windows PC and set `open_and_close_app` false and `app_host` to that PC's
+address. Nothing was started.
+
+**`... cannot be reached at ...`**
+`open_and_close_app` is false and nothing answers at `app_host`. The message lists what to check:
+the application is open on that PC, its port, the network, and the firewall. A bench PC's address
+can change after a restart — check it with `ipconfig` there.
+
+**`This application build has no API mode ...`**, **`Another Python client is already controlling the application`**, **`The application is busy ...`**
+API mode was refused, so nothing was started — see [API mode](#api-mode). Install a build with API
+mode, wait for the other client or the window's test to finish, or select **UI mode** in the window
+to free it, then run again.
+
+**`Test Execution STOPPED: control was taken back at the bench`**
+Someone selected **UI mode** in the application's window during the run. The test was stopped and
+the application left open.
 
 **`No GRL configuration file at: ...`**
 The path is relative and resolved against the directory you are in. Run from your workspace, pass

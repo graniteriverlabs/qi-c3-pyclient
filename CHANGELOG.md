@@ -1,6 +1,10 @@
 # Changelog
 
-## 1.1.0
+## 1.1.0 (beta)
+
+Beta: complete and tested on MPP-TPR and MPP-TPT benches, from Windows and from macOS, but newer
+than 1.0.0 and less used. Settings and messages may still change before it is marked stable.
+1.0.0 stays the stable release. See "Versions" in the README.
 
 - **API mode on MPP-TPR and MPP-TPT WebSocket builds.** The client takes control of the
   application over its WebSocket and answers every pop-up there. The window keeps showing the run,
@@ -26,7 +30,7 @@
   installed.
 - `c3-init` checks `app_path` only for an application the client opens itself.
 
-## 1.0.0
+## 1.0.0 (stable)
 
 First release.
 

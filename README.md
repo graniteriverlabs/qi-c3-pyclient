@@ -12,12 +12,43 @@ with GRLApiClient() as client:        # starts the application and connects the 
     print(client.run_compliance())    # runs the cases selected in Manual_test_cases.json
 ```
 
+## Versions
+
+| Version | Status | Use it when |
+|---|---|---|
+| **1.1.0** | **Beta** | your MPP-TPR or MPP-TPT application has **API mode** — its window shows a "UI mode / API mode" choice at the top right — or you want to run from a Mac, or against an application that is already open |
+| **1.0.0** | **Stable** | your application has no API mode, and the client runs on the Windows PC the application is installed on |
+
+**This page describes 1.1.0.** The 1.0.0 instructions are kept with that release:
+[README for 1.0.0](https://github.com/graniteriverlabs/qi-c3-pyclient/blob/v1.0.0/README.md) ·
+[user guide for 1.0.0](https://github.com/graniteriverlabs/qi-c3-pyclient/blob/v1.0.0/grlps_c3_client/docs/USER_GUIDE.md).
+
+**Beta** means: 1.1.0 is complete and was tested on MPP-TPR and MPP-TPT benches, run from Windows and
+from a Mac. It is newer than 1.0.0 and has had less use, and it needs an application build with
+API mode. Its settings and messages may still change before it is marked stable. Report a problem
+with the run's log and HTTP trace — see [Troubleshooting](#troubleshooting).
+
+What 1.1.0 changes from 1.0.0:
+
+| | 1.0.0 (stable) | 1.1.0 (beta) |
+|---|---|---|
+| Where the client runs | Windows, on the PC the application is installed on | the same, **or** a Mac or another PC on the same network |
+| The application | opened by the client and closed at the end | the same by default, **or** an application that is already open, left open at the end — see [Opening and closing the application](#opening-and-closing-the-application) |
+| Pop-ups on MPP-TPR and MPP-TPT WebSocket builds | answered by clicking the application's window | answered over the application's WebSocket, in **API mode** |
+| Taking control back at the bench | — | select **UI mode** in the window: the running test stops |
+| Reports and exerciser captures | copied from the application's folder | downloaded through the application, so a run from a Mac saves the same files |
+| REST builds (GRL-WP-TPR-C3 and others) | supported | unchanged |
+| Python packages installed with it | `requests`, `websocket-client`, `pywinauto` | `requests`, `websocket-client` |
+
+Everything else — the commands, the workspace, the configuration file and the Python calls — is
+the same in both versions, so the [Quickstart](#quickstart) steps are the same too.
+
 ## Contents
 
 | Part | What is in it |
 |---|---|
-| **[Getting started](#getting-started)** | [Requirements](#requirements) · [Install](#install) · [Quickstart](#quickstart) — a bench from nothing to a finished run |
-| **[Running tests](#running-tests)** | [Commands](#commands) · [Where your results are](#where-your-results-are) · [more than one application](#working-with-more-than-one-application) |
+| **[Getting started](#getting-started)** | [Requirements](#requirements) · [Install](#install) · [Quickstart](#quickstart) — a bench from nothing to a finished run · [From a Mac or another PC](#from-a-mac-or-another-pc) |
+| **[Running tests](#running-tests)** | [Commands](#commands) · [Where your results are](#where-your-results-are) · [more than one application](#working-with-more-than-one-application) · [Opening and closing the application](#opening-and-closing-the-application) · [API mode](#api-mode) |
 | **[Exerciser sessions](#exerciser-sessions)** | driving the emulator directly instead of running test cases |
 | **[The Python API](#the-python-api)** | the same steps as library calls, for your own scripts |
 | **[Keeping it current](#keeping-it-current)** | [Upgrading](#upgrading) · [The workspace](#the-workspace) |
@@ -27,34 +58,34 @@ with GRLApiClient() as client:        # starts the application and connects the 
 
 ### Requirements
 
-| | |
-|---|---|
-| OS | Windows, or macOS with the application open on a Windows PC — see [Opening and closing the application](#opening-and-closing-the-application) |
-| Python | 3.11 or newer (checked at install and at import) |
-| Software | the GRLPS C3 application you want to drive, installed and licensed |
-| | MPP-TPR and MPP-TPT: a build with API mode — its window shows a "UI mode / API mode" choice at the top right. The client answers the application's pop-ups in API mode, and stops with that reason on an older build |
-| Hardware | a reachable GRLPS C3 tester |
-
-While a run is going, the application's window shows **API mode** and a red **!** icon: the client is
-in control and answers every pop-up. Selecting **UI mode** in the window takes control back — the
-running test stops, and the run ends with `Test Execution STOPPED: control was taken back at the bench`.
+| | 1.1.0 (beta) | 1.0.0 (stable) |
+|---|---|---|
+| OS | Windows; or macOS, with the application open on a Windows PC | Windows |
+| Python | 3.11 or newer (checked at install and at import) | 3.11 or newer |
+| Software | the GRLPS C3 application you want to drive, installed and licensed | the same |
+| | MPP-TPR and MPP-TPT WebSocket builds: a build with **API mode** (a "UI mode / API mode" choice at the top right of its window). On a WebSocket build without it the client stops before anything starts, and says why | any build |
+| Hardware | a GRLPS C3 tester the application can reach | the same |
 
 ### Install
 
-You do **not** need to clone this repository.
+You do **not** need to clone this repository. Install one version — see [Versions](#versions):
+
+**1.1.0 (beta)**
 
 ```powershell
 pip install https://github.com/graniteriverlabs/qi-c3-pyclient/releases/download/v1.1.0/qi_c3_pyclient-1.1.0-py3-none-any.whl
 ```
 
-That is the only install command. It covers both REST and WebSocket builds of the applications.
+**1.0.0 (stable)**
 
-> **Application without API mode?** If your MPP-TPR or MPP-TPT application has no
-> "UI mode / API mode" choice in its window yet, install 1.0.0 instead:
->
-> ```powershell
-> pip install https://github.com/graniteriverlabs/qi-c3-pyclient/releases/download/v1.0.0/qi_c3_pyclient-1.0.0-py3-none-any.whl
-> ```
+```powershell
+pip install https://github.com/graniteriverlabs/qi-c3-pyclient/releases/download/v1.0.0/qi_c3_pyclient-1.0.0-py3-none-any.whl
+```
+
+Either command covers both REST and WebSocket builds of the applications.
+`pip show qi-c3-pyclient` shows which version is installed.
+
+On a Mac, install into a virtual environment — see [From a Mac or another PC](#from-a-mac-or-another-pc).
 
 > **Names:** the distribution is `qi-c3-pyclient`; the module you import is `grlps_c3_client`.
 
@@ -212,8 +243,95 @@ Compliance run   GRL-C3-MP-TPR
 Start the application → connect → create the project → load the description file → run the selected
 cases → collect the report → shut down.
 
+On an MPP-TPR or MPP-TPT WebSocket build, 1.1.0 also puts the application in
+[API mode](#api-mode) once it has started, and gives control back to the window before it closes
+the application.
+
 If something would stop the run — no tester address, a missing description file, nothing
 selected — every reason is printed under that summary and **nothing is started**.
+
+### From a Mac or another PC
+
+*1.1.0 (beta).* The application stays on its Windows PC (the **bench PC**). The client runs on your
+Mac, or on another PC, and reaches the application over the network. The
+[Quickstart](#quickstart) steps are the same; three settings are added.
+
+| | Bench PC (Windows) | Your Mac |
+|---|---|---|
+| Runs | the application and its window | the client and its commands |
+| Talks to the tester | yes — the application connects to it | no |
+| Holds | the application's own report folders | your workspace: settings, description files, test-case selection, and the reports and logs of every run |
+
+Tested from a Mac with MPP-TPR and MPP-TPT builds with API mode.
+
+#### On the bench PC
+
+1. Open the application and leave it open. It must be an MPP-TPR or MPP-TPT build with API mode.
+   Leave it in **UI mode** — the client switches it to API mode when a command starts.
+2. Find the PC's address: run `ipconfig` and read the **IPv4 Address** of the network adapter in
+   use, e.g. `192.0.2.20`. The address can change after a restart or a reconnect, so check it each
+   session.
+3. Let the application through Windows Defender Firewall, for the network type the PC is on.
+   Windows asks the first time the application starts; if the Mac cannot reach it later, check
+   **Allow an app through firewall** for the application's `C3BrowserApp_*.exe`.
+
+Do not start a test from the window while the client is running one.
+
+#### On the Mac
+
+In Terminal, with Python 3.11 or newer (`python3 -V`):
+
+```bash
+python3 -m venv ~/c3venv
+source ~/c3venv/bin/activate          # run this again in every new Terminal window
+pip install https://github.com/graniteriverlabs/qi-c3-pyclient/releases/download/v1.1.0/qi_c3_pyclient-1.1.0-py3-none-any.whl
+
+mkdir ~/c3-bench
+cd ~/c3-bench
+c3-init
+c3-init --app GRL-C3-TPT-MPP --tester 192.0.2.61
+```
+
+`--tester` is the address **the bench PC** uses to reach the tester — the Mac never talks to the
+tester.
+
+Then set three values in `~/c3-bench/grl_config.json`:
+
+```json
+"common": {
+    "open_and_close_app": false,
+    "app_host": "192.0.2.20",
+    ...
+},
+...
+"Selected_app": "GRL-C3-TPT-MPP"
+```
+
+| Setting | Set it to |
+|---|---|
+| `open_and_close_app` | `false` — use the application that is already open, and leave it open |
+| `app_host` | the bench PC's address, with no `http://` and no port. The port is the application's `known_port`: 2002 for MPP-TPR, 2004 for MPP-TPT |
+| `Selected_app` | the application on the bench PC: `GRL-C3-MP-TPR` or `GRL-C3-TPT-MPP` |
+
+Check that the Mac reaches the application, before running anything:
+
+```bash
+curl http://192.0.2.20:2004/api/App/GetSoftwareVersion      # prints the application's version
+c3-apps
+```
+
+```
+GRL-C3-TPT-MPP will use
+  Application          already open on 192.0.2.20, port 2004 - left open at the end
+```
+
+`c3-apps` only reads the configuration; the `curl` line is the network check.
+
+From here, follow [Quickstart](#quickstart) steps 4–7 on the Mac. Paths use `/`, for example
+`JSON_User_input/GRL-C3-TPT-MPP/esdf/`. Every run saves its report, logs and captures in
+`~/c3-bench`, the same files a run on the bench PC saves.
+
+From a second Windows PC, set the same three values in that PC's workspace.
 
 ## Running tests
 
@@ -348,8 +466,28 @@ it tried, why it failed, and what to check. `c3-apps` and the summary each comma
 which applies:
 
 ```
-  Application        already open on 192.0.2.20, port 2004 - left open at the end
+  Application          already open on 192.0.2.20, port 2004 - left open at the end
 ```
+
+On a Mac, or with an `app_host` that is another PC, `open_and_close_app` must be `false` — see
+[From a Mac or another PC](#from-a-mac-or-another-pc).
+
+### API mode
+
+*1.1.0 (beta), MPP-TPR and MPP-TPT WebSocket builds.* The client takes control of the application
+over its WebSocket and answers every pop-up there, so nobody has to click the window — on the bench
+PC or from a Mac.
+
+| In the application's window | Means |
+|---|---|
+| **API mode** and a red **!** icon at the top right | the client is in control |
+| pop-ups that show and close by themselves | the client answered them |
+| **UI mode** selected by someone at the bench | control is taken back: the running test stops, the run ends with `Test Execution STOPPED: control was taken back at the bench`, and the application is left open |
+| back in **UI mode** after the run | the client gave control back |
+
+There is nothing to configure: the client switches to API mode when a command starts, and back to
+UI mode when it ends. Only one client can be in control at a time. If a test is already running
+from the window, the client starts nothing and says the application is busy.
 
 ## Exerciser sessions
 
@@ -567,23 +705,40 @@ relying entirely on the configuration file.
 
 ### Upgrading
 
+**From 1.0.0 to 1.1.0 (beta)**
+
 ```powershell
 pip install --upgrade https://github.com/graniteriverlabs/qi-c3-pyclient/releases/download/v1.1.0/qi_c3_pyclient-1.1.0-py3-none-any.whl
 cd C:\benches\my-bench
 c3-init
 ```
 
-Upgrading to 1.1.0 needs an MPP-TPR or MPP-TPT application with API mode; without it, stay on
-1.0.0 (see [Install](#install)).
+Upgrade when your MPP-TPR or MPP-TPT application is a WebSocket build with API mode, or a REST
+build. On a WebSocket build without API mode, stay on 1.0.0 — see [Versions](#versions).
 
 **Run `c3-init` again after upgrading.** A new version can add settings, and your
-`grl_config.json` already exists, so only `c3-init` puts them there. It reports what it added:
+`grl_config.json` already exists, so only `c3-init` puts them there. It reports what it added —
+from 1.0.0 to 1.1.0:
 
 ```
-Added 2 setting(s) new in this version:
-  common.exerciser.new_control
-  applications.GRL-C3-BRAND-NEW
+Added 3 setting(s) new in this version:
+  common.open_and_close_app
+  common.app_host
+  common._app_comment
 ```
+
+The values added behave as 1.0.0 did: the application on this PC, opened and closed by the client.
+
+**Back to 1.0.0**
+
+```powershell
+pip install https://github.com/graniteriverlabs/qi-c3-pyclient/releases/download/v1.0.0/qi_c3_pyclient-1.0.0-py3-none-any.whl
+```
+
+The same workspace keeps working; 1.0.0 does not read the settings 1.1.0 added.
+
+**Reinstalling the same version.** `pip install` with the URL of the version that is already
+installed does nothing. To replace it, add `--force-reinstall --no-cache-dir`.
 
 **Nothing you have set is changed** — only missing keys are added, and missing files are put
 back. With nothing to do it prints nothing.
@@ -675,6 +830,27 @@ The client requires CPython 3.11 or newer. Check with `python -V` (`python3 -V` 
 Printed with `open_and_close_app` true on a Mac, or with an `app_host` that is another PC. Open it on the Windows PC and set
 `"open_and_close_app": false` and `"app_host": "<the Windows PC's address>"` in `grl_config.json`.
 
+**`... cannot be reached at ...`**
+The client did not reach the application at `app_host`. The message lists what to check: the
+application is open on that PC, the port, the network, and the firewall. The bench PC's address
+can change — run `ipconfig` there again and compare it with `app_host`.
+
+**`This application build has no API mode ... Nothing was started.`**
+1.1.0 on an MPP-TPR or MPP-TPT WebSocket build without API mode. Install the application build with
+API mode, or go back to 1.0.0 — see [Upgrading](#upgrading).
+
+**`Another Python client is already controlling the application`**
+Another client holds API mode. Wait for its run to end, or select **UI mode** in the application's
+window, then run again.
+
+**`The application is busy ...`**
+Something was started from the window. Wait for it to finish, or stop it in the window, then run
+again.
+
+**`Test Execution STOPPED: control was taken back at the bench`**
+Someone selected **UI mode** in the application's window during the run. The running test was
+stopped and the application left open. Run again when the bench is free.
+
 **`no matching distribution found`**
 Your Python is older than 3.11. The package declares `requires-python = ">=3.11"`.
 
@@ -712,9 +888,11 @@ together they show every call the client made and what came back.
 
 | Guide | Covers |
 |---|---|
-| [User guide](grlps_c3_client/docs/USER_GUIDE.md) | every method, its inputs and what it returns, the workspace, and troubleshooting |
+| [User guide](grlps_c3_client/docs/USER_GUIDE.md) | 1.1.0 (beta): every method, its inputs and what it returns, the workspace, and troubleshooting |
+| [README for 1.0.0](https://github.com/graniteriverlabs/qi-c3-pyclient/blob/v1.0.0/README.md) · [user guide for 1.0.0](https://github.com/graniteriverlabs/qi-c3-pyclient/blob/v1.0.0/grlps_c3_client/docs/USER_GUIDE.md) | 1.0.0 (stable) |
+| [Changelog](CHANGELOG.md) | what changed in each version |
 
-The guide ships inside the package. Find it with:
+The guide for the installed version ships inside the package. Find it with:
 
 ```python
 from grlps_c3_client import docs_dir
