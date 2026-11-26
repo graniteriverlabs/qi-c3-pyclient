@@ -14,10 +14,10 @@ with GRLApiClient() as client:        # starts the application and connects the 
 
 ## Versions
 
-| Version | Status | Use it when |
+| Version | Status | Recommended when |
 |---|---|---|
-| **1.1.0** | **Beta** | your MPP-TPR or MPP-TPT application has **API mode** — its window shows a "UI mode / API mode" choice at the top right — or you want to run from a Mac, or against an application that is already open |
-| **1.0.0** | **Stable** | your application has no API mode, and the client runs on the Windows PC the application is installed on |
+| **1.1.0** | **Beta** | Any of the following applies:<br>1. Your MPP-TPR or MPP-TPT application supports API mode, shown by the **UI mode / API mode** selector at the top right of the application window.<br>2. The client is to run on macOS.<br>3. The client is to connect to an application that is already running, on the same PC or on another Windows PC on your network. |
+| **1.0.0** | **Stable** | All of the following apply:<br>1. Your application does not support API mode.<br>2. The client runs on the same Windows PC as the application. |
 
 **This page describes 1.1.0.** The 1.0.0 instructions are kept with that release:
 [README for 1.0.0](https://github.com/graniteriverlabs/qi-c3-pyclient/blob/v1.0.0/README.md) ·
