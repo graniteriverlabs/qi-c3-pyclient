@@ -371,24 +371,6 @@ class GRLApiClient:
             self.logger.error("Exerciser manager not available")
             return {"success": False, "error": "no exerciser manager"}
 
-        # License from the connect the client already made (no redundant connect), decided
-        # against the profile this session will drive and the Qi specification version the
-        # controller is actually set to - not against a fixed version.
-        conn_mgr = getattr(self.legacy, "connection_manager", None)
-        profile = spec = None
-        try:
-            pm = self.legacy.project_manager
-            profile = pm._esdf_power_profile(pm._setup_directories())
-            resp = self.api_handler.call_api(ApiName.GET_SELECTED_QI_SPEC_MODE_MPP)
-            spec = ((resp or {}).get("response", {}).get("data") or {}).get("qiSpecMode")
-        except Exception as exc:
-            self.logger.debug(f"Could not establish profile/spec for the licence check: {exc}")
-        ex.apply_license(getattr(conn_mgr, "last_connection_info", None),
-                         profile=profile, spec=spec)
-        if not ex.licensed:
-            self.logger.error(f"Exerciser mode blocked: {ex.license_reason}")
-            return {"success": False, "error": ex.license_reason}
-
         from client.modules import exerciser_sequence as seq
         from utils.project_root import project_root
         root = project_root()
@@ -425,6 +407,15 @@ class GRLApiClient:
         for problem in problems:
             self.logger.warning(f"[exerciser] {problem}")
 
+        # The licence is decided for what THIS SEQUENCE asks for - its power profile at its Qi
+        # version - and that request is put on the application before anything else is sent, so
+        # the session drives what was checked. Fail-closed: see client.core.qi_request.
+        refusal = self._exerciser_request(info, os.path.basename(seq_path),
+                                          write=not session.get("dry_run"))
+        if refusal:
+            self.logger.error(f"Exerciser mode blocked: {refusal}")
+            return {"success": False, "error": refusal}
+
         # NOTE: `spec_mode` is NOT the power profile. `PutSelectedQiSpecMode` selects a legacy
         # spec/technology ("MPP"/"BPP"/"EPP" on TPT, "1.3"/"2.1"/... on MPP-TPR) and its C# switch
         # has no default, so a power profile like "MPP25" falls through and does nothing behind an
@@ -440,6 +431,43 @@ class GRLApiClient:
                          f"verify={session.get('verify', 'strict')}, "
                          f"dry_run={bool(session.get('dry_run'))})")
         return ex.run_session(session, steps)
+
+    def _exerciser_request(self, info: Dict[str, Any], sequence_name: str, write: bool) -> str:
+        """
+        Check and apply what the exerciser sequence asks for; "" when the session may start,
+        otherwise why not.
+
+        The request is the sequence's ``PowerProfile`` at its ``QiSpecification`` version. A
+        C3-TPR export names no profile, so there the application's current profile is the one
+        checked and used, and the log says so. On a dry run the request is checked and nothing
+        is written.
+        """
+        from client.core import qi_request
+
+        ex = self.exerciser
+        conn_mgr = getattr(self.legacy, "connection_manager", None)
+        connection_info = getattr(conn_mgr, "last_connection_info", None)
+        handler = getattr(self.__dict__.get("api_interface"), "api_handler", None)
+        source = "sequence file {0}".format(sequence_name)
+        if handler is None:
+            reason = ("the application is not connected, so the profile and Qi version this "
+                      "session asks for cannot be checked")
+        else:
+            result = qi_request.check_and_apply(
+                handler, self.logger, connection_info, self.config_manager.app_name,
+                profile=info.get("power_profile"), spec=info.get("qi_spec"), source=source,
+                profile_from_app=True, write=write)
+            reason = "" if result["allowed"] else result["reason"]
+            # The manager keeps the licence verdict for the session itself; give it the same one.
+            if result.get("profile") and result.get("spec"):
+                ex.apply_license(connection_info, profile=result["profile"],
+                                 spec=result["spec"], source=source)
+                if not ex.licensed and not reason:
+                    reason = ex.license_reason
+        if reason and ex is not None:
+            ex._licensed = False
+            ex._license_reason = reason
+        return reason
 
     def _exerciser_capture_dir(self, root: str, app: str) -> str:
         """Per-session evidence folder, alongside the compliance run captures."""

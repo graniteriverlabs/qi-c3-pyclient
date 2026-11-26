@@ -45,9 +45,9 @@ def _applicable_cases(client) -> Optional[List[str]]:
     # description file enables. Those differ - a BPP file allows 3 and a manual list may select 1.
     stamp = os.path.getmtime(listing) if os.path.exists(listing) else None
 
-    # A real run syncs the controller to the description file's power profile before the case list
-    # is read. Do the same here, or the list can reflect the profile from a previous run.
-    manager._sync_spec_mode_to_esdf(directories)
+    # create_project puts the description file's profile at its Qi version on the application and
+    # checks the licence for exactly that, before the project exists - the same step a run takes,
+    # so the list is the one for this file, and an unlicensed request produces no list at all.
     manager.create_project(project_name="get-testcases")
 
     # The list is only this run's if this run wrote it. Without that check a refused

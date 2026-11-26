@@ -171,17 +171,23 @@ def mpp_covers_baseline(app_name: Any) -> bool:
 def evaluate(connection_info: Any,
              profile: Optional[str] = None,
              spec: Optional[str] = None,
-             app_name: Optional[str] = None) -> Dict[str, Any]:
+             app_name: Optional[str] = None,
+             source: Optional[str] = None) -> Dict[str, Any]:
     """
     Decide whether this controller is licensed for what is being asked of it.
 
+    Fail-closed: the profile AND the Qi version asked for must both be known, and a licence must
+    cover that profile at that version. Anything missing - no licence list, no profile, no
+    version - is a refusal, never a pass.
+
     Args:
         connection_info: the connect response the client already cached
-        profile: the power profile the run will use, from the device description file
-        spec: the Qi specification version the controller is set to, if known
+        profile: the power profile the run asks for, from the description file or sequence
+        spec: the Qi specification version the run asks for
         app_name: which application is being driven. On MPP-TPR an MPP licence also allows
             BPP, EPP and EPP5, because MPP builds on them. Everywhere else - both TPT
             applications and the WP product - only the profiles the licence names are allowed.
+        source: where the request came from, named in the messages (e.g. "description file X")
 
     Returns:
         ``{"allowed", "reason", "covering", "enabled", "asked"}``. ``enabled`` lists every active
@@ -193,8 +199,10 @@ def evaluate(connection_info: Any,
     enabled = [m["name"] for m in active]
     want_spec = normalise_spec(spec)
     want_profile = (profile or "").upper().strip() or None
-    asked = "{0}{1}".format(want_profile or "any profile",
-                            " at Qi spec {0}".format(want_spec) if want_spec else "")
+    asked = "{0}{1}{2}".format(want_profile or "an unknown profile",
+                               " at Qi spec {0}".format(want_spec) if want_spec
+                               else " at an unknown Qi spec",
+                               " (from the {0})".format(source) if source else "")
 
     if not modules:
         return {"allowed": False, "reason":
@@ -210,14 +218,19 @@ def evaluate(connection_info: Any,
                                        for m in modules) or "nothing"),
                 "covering": [], "enabled": enabled, "asked": asked}
 
-    if not want_profile:
-        # Nothing specific was asked, so any active licence is enough to proceed.
-        return {"allowed": True,
-                "reason": "controller is licensed: {0}".format(", ".join(enabled)),
-                "covering": enabled, "enabled": enabled, "asked": asked}
+    # A licence is for a profile at a version. Without both there is nothing to match, and
+    # "some licence is active" is not "this request is licensed".
+    if not want_profile or not want_spec:
+        return {"allowed": False, "reason":
+                "the {0} this run asks for is not known, so its licence cannot be checked.\n"
+                "  asked for: {1}\n  licensed  : {2}".format(
+                    "power profile" if not want_profile else "Qi specification version",
+                    asked, ", ".join(enabled) or "nothing"),
+                "covering": [], "enabled": enabled, "asked": asked}
 
     def _spec_ok(module):
-        return want_spec is None or module["spec"] is None or module["spec"] == want_spec
+        # A module whose name carries no version covers every version (kept by decision).
+        return module["spec"] is None or module["spec"] == want_spec
 
     covering = [m["name"] for m in active if want_profile in m["profiles"] and _spec_ok(m)]
     if covering:
@@ -253,7 +266,7 @@ def evaluate(connection_info: Any,
 
     return {"allowed": False,
             "reason": "{0}.\n  asked for: {1}\n  licensed  : {2}\n"
-                      "  The application will not run an unlicensed profile either. Select a "
-                      "description file for a profile this controller is licensed for, or have "
-                      "the licence added.".format(detail, asked, ", ".join(enabled) or "nothing"),
+                      "  Nothing was started. Use a description file or sequence for a profile "
+                      "and Qi version this controller is licensed for, or have the licence "
+                      "added.".format(detail, asked, ", ".join(enabled) or "nothing"),
             "covering": [], "enabled": enabled, "asked": asked}

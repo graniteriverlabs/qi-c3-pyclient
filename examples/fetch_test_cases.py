@@ -27,7 +27,8 @@ def main():
 
         manager = client.legacy.project_manager
         directories = manager._setup_directories()
-        manager._sync_spec_mode_to_esdf(directories)
+        # Sets the description file's profile at its Qi version on the application and checks the
+        # licence for it first; an unlicensed request creates no project and lists nothing.
         manager.create_project(project_name="fetch-only")
 
         listing = (Path(directories["root_dir"]) / "Test_Case_List_From_System"

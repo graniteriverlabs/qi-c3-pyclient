@@ -15,27 +15,8 @@ from .project_config_manager import ProjectConfigManager
 from .test_case_manager import TestCaseManager
 
 
-# What `GetSelectedQiSpecMode_MPP` is CAPABLE OF REPORTING, per Qi spec version. Read from that
-# getter in QiDataModelTPR: it maps QIHelper.CustomVer, and at spec 2.2/2.3 that switch only has
-# arms for MPP15 and MPP25 (everything else returns MPP25).
-#
-# This is NOT the set the setter accepts. The setter stores the profile in a DIFFERENT field:
-# after resolving CustomVer it does Enum.TryParse<DutProfile>(powerProfile), and DutProfile holds
-# BPP/EPP/EPP5/MPP/APP/MPP15/MPP25/APP15/APP25/MCPE/MCPM. So APP25 at spec 2.2 IS applied — it
-# lands in _dutProfile — while CustomVer stays MPP25 and the getter can only ever echo CustomVer.
-# The write succeeds and the read-back cannot show it. Use this table only to decide whether a
-# non-matching read-back means failure or merely means "not observable".
-_PROFILES_REPORTABLE_BY_SPEC = {
-    "2.0.1": {"MPP"},
-    "2.1": {"MPP", "APP"},
-    "2.2": {"MPP15", "MPP25"},
-    "2.3.0": {"MPP15", "MPP25"},
-}
-
-# App quirk: GetSelectedQiSpecMode_MPP returns "2.3", but PutSelectedQiSpecMode_MPP only has a
-# case for "2.3.0". Reading the current mode and writing it straight back therefore cannot work
-# at spec 2.3. Translate on the way out.
-_SPEC_MODE_ON_THE_WIRE = {"2.3": "2.3.0"}
+# The profile and Qi version a run asks for, the spellings each application accepts and what its
+# read-back can show are in client.core.qi_request.
 
 #: Per-app controller power-profile guard (B1). set_project aborts if the connected
 #: controller's reported ``powerProfile`` is not in the app's allow-set — a safety check
@@ -123,12 +104,16 @@ class ProjectManager:
             if not esdf_model:
                 return []
 
-            # The licence is checked HERE, before a project exists, because this is the point
-            # both ways of working pass through and the earliest point at which the profile
-            # being asked for is known. Checking it later would let an unlicensed run get as far
-            # as selecting cases. On 2026-10-08 this bench reported eight modules, none of them
-            # BPP, and a BPP project was created with three cases offered.
-            if not self._license_ok(directories, esdf_file_path):
+            # The request - this description file's profile at its Qi version - is checked against
+            # the licence and set on the application HERE, before a project exists, for the exact
+            # file this project uses. Every way in passes through: a run, a run per file in the
+            # esdf folder, and fetching the test cases. Checking later would let an unlicensed
+            # request get as far as selecting cases (seen 2026-10-08: a BPP project created with
+            # three cases on a controller with no BPP licence).
+            refusal = self._check_request(directories, esdf_file_path)
+            if refusal:
+                self.test_case_manager.last_problem = (
+                    "Test Execution did not start: " + refusal.splitlines()[0])
                 return []
 
             put_project_config["EsdfConfigurationModel"] = esdf_model
@@ -223,16 +208,18 @@ class ProjectManager:
             return True, None
         return (power_profile in allowed), allowed
 
-    def _license_ok(self, directories, esdf_file_path: str = None) -> bool:
+    def _check_request(self, directories, esdf_file_path: str = None) -> str:
         """
-        Whether this controller is licensed for the profile this run will use.
+        Check and apply what this description file asks for; "" when the project may be created,
+        otherwise why not (already logged).
 
-        The decision is in `client.core.license_gate`, from the connect response the client
-        already cached - no extra call, and the same decision for every caller. Refusing says
-        what was asked for and what the controller has, so a refusal can be checked rather than
-        worked around.
+        The request is the file's ``PowerProfile`` at its ``SpecificationSupported`` Qi version.
+        The application's own setting is NOT the request: MPP-TPT resets it to its default on
+        every tester connect. The decision is `client.core.qi_request` - fail-closed, the same
+        for every caller: no licence list, no profile, no version, or an application that does
+        not take the request, and nothing is created.
         """
-        from client.core import license_gate
+        from client.core import qi_request
 
         connection_info = None
         client = getattr(self, "client", None)
@@ -241,33 +228,57 @@ class ProjectManager:
         if conn_mgr is not None:
             connection_info = getattr(conn_mgr, "last_connection_info", None)
 
-        if connection_info is None:
-            # Nothing to decide from. Say so rather than passing silently: a licence check that
-            # quietly does nothing is worse than none, because it reads as a check having run.
-            self.logger.warning(
-                "Licence not checked: no connect response is available. Connect to the tester "
-                "before creating a project."
-            )
-            return True
+        path = esdf_file_path or os.path.join(
+            directories.get("json_dir", ""),
+            (self.config_manager.file_map or {}).get("EsdfConfigurationModel", ""))
+        source = "description file {0}".format(os.path.basename(path) or "?")
+        app_name = getattr(self.config_manager, "app_name", None)
 
-        profile = self._esdf_power_profile(directories, esdf_file_path)
-        spec = None
+        result = qi_request.check_and_apply(
+            self.api_handler, self.logger, connection_info, app_name,
+            profile=self._esdf_power_profile(directories, esdf_file_path),
+            spec=self._esdf_spec_version(directories, esdf_file_path),
+            source=source, profile_from_app=False, write=True,
+            allowed_profiles=_PROFILE_GUARD.get(app_name))
+        if result["allowed"]:
+            return ""
+        if result["licence"]:
+            self.logger.error("Licence check FAILED - the project was not created.\n  {0}".format(
+                result["reason"]))
+            return "licence check failed - " + result["reason"]
+        self.logger.error("The project was not created: {0}".format(result["reason"]))
+        return result["reason"]
+
+    def _esdf_spec_version(self, directories, esdf_file_path: str = None) -> Optional[str]:
+        """
+        The Qi specification version the selected description file declares, or None.
+
+        A WPC signed file carries it as ``DutInfo.SpecificationSupported`` (verified by the
+        application before this is reached); an older flat file (SchemaVersion 2.0) carries the
+        same key at its top level. A file that declares none falls back, visibly, to the
+        application's setting.
+        """
+        import json
+
         try:
-            resp = self.api_handler.call_api(ApiName.GET_SELECTED_QI_SPEC_MODE_MPP)
-            spec = ((resp or {}).get("response", {}).get("data") or {}).get("qiSpecMode")
-        except Exception:
-            pass
-
-        verdict = license_gate.evaluate(
-            connection_info, profile=profile, spec=spec,
-            app_name=getattr(self.config_manager, "app_name", None))
-        if verdict["allowed"]:
-            self.logger.info("Licence check passed: {0}".format(verdict["reason"]))
-            return True
-
-        self.logger.error("Licence check FAILED - the project was not created.\n  {0}".format(
-            verdict["reason"]))
-        return False
+            path = esdf_file_path or os.path.join(
+                directories["json_dir"],
+                self.config_manager.file_map["EsdfConfigurationModel"])
+            with open(path, encoding="utf-8") as fh:
+                raw = json.load(fh)
+            if not isinstance(raw, dict):
+                return None
+            holder = raw["DutInfo"] if isinstance(raw.get("DutInfo"), dict) else raw
+            value = holder.get("SpecificationSupported")
+            if value not in (None, ""):
+                return str(value).strip()
+            for e in raw.get("Esdf_Elements") or []:
+                if isinstance(e, dict) and e.get("Field") == "SpecificationSupported":
+                    value = e.get("Value")
+                    return str(value).strip() if value not in (None, "") else None
+        except Exception as e:
+            self.logger.debug(f"Could not read the ESDF's SpecificationSupported: {e}")
+        return None
 
     def _esdf_power_profile(self, directories, esdf_file_path: str = None) -> Optional[str]:
         """
@@ -289,75 +300,6 @@ class ProjectManager:
         except Exception as e:
             self.logger.debug(f"Could not read ESDF PowerProfile: {e}")
         return None
-
-    def _sync_spec_mode_to_esdf(self, directories) -> None:
-        """
-        Make the controller's spec mode match the SELECTED ESDF's PowerProfile (compliance).
-
-        RCA: the app never derives the controller profile from the ESDF; set_project only READ
-        `GetSelectedQiSpecMode_MPP` for the guard and never set it, so selecting e.g. the MPP15
-        ESDF still executed as whatever the controller was last set to (MPP25). This reads the
-        ESDF's PowerProfile and, only if the controller reports a DIFFERENT one, sets it via
-        `PutSelectedQiSpecMode_MPP` (which does not change app mode on these apps), then re-reads
-        to confirm. No-op when they already match (zero risk to working runs); never raises — on
-        any failure the run proceeds exactly as before.
-        """
-        try:
-            esdf_prof = self._esdf_power_profile(directories)
-            if not esdf_prof:
-                # Silent here was the second half of the 2026-09-16 failure: no profile meant
-                # no sync AND no scoped case fetch, so the run used whatever the controller was
-                # last set to. Fetching the cases now refuses outright, but say why here too -
-                # this is where the information was lost.
-                self.logger.warning(
-                    "Cannot sync the controller: the selected description file's PowerProfile "
-                    "could not be read, so the controller keeps whatever profile it is on."
-                )
-                return
-            resp = self.api_handler.call_api(ApiName.GET_SELECTED_QI_SPEC_MODE_MPP)
-            data = resp.get("response", {}).get("data", {}) or {}
-            current = data.get("powerProfile")
-            spec = data.get("qiSpecMode")
-            if current == esdf_prof:
-                return  # controller already matches the ESDF — nothing to do
-
-            wire_spec = _SPEC_MODE_ON_THE_WIRE.get(spec, spec)
-            self.logger.info(
-                f"Spec-mode sync: controller reports '{current}' at Qi spec '{spec}' but the "
-                f"selected ESDF is '{esdf_prof}' -> setting the controller to '{esdf_prof}'"
-            )
-            payload = dict(data)
-            payload["powerProfile"] = esdf_prof
-            if wire_spec != spec:
-                # The app's getter emits "2.3" but its setter only matches "2.3.0", so echoing
-                # back what we just read would fall through to the default and force MPP25.
-                payload["qiSpecMode"] = wire_spec
-                self.logger.info(
-                    f"Spec-mode sync: sending qiSpecMode '{wire_spec}' instead of the reported "
-                    f"'{spec}' — the application reads and writes different spellings (D-10)"
-                )
-            self.api_handler.call_api(ApiName.PUT_SELECTED_QI_SPEC_MODE_MPP, data=payload)
-            confirm = self.api_handler.call_api(ApiName.GET_SELECTED_QI_SPEC_MODE_MPP)
-            now = (confirm.get("response", {}).get("data", {}) or {}).get("powerProfile")
-            if now == esdf_prof:
-                self.logger.info(f"Spec-mode sync: controller now reports '{now}'")
-            elif esdf_prof not in _PROFILES_REPORTABLE_BY_SPEC.get(wire_spec, set()):
-                # Not a failure. The write stores the profile in one field and the read-back
-                # reports a different one, so an APP profile at spec 2.2/2.3 is applied but can
-                # never be echoed. Reported as unconfirmed rather than failed.
-                self.logger.info(
-                    f"Spec-mode sync: '{esdf_prof}' was applied, but this build's read-back only "
-                    f"reports {sorted(_PROFILES_REPORTABLE_BY_SPEC.get(wire_spec, set()))} at Qi "
-                    f"spec '{spec}', so it still shows '{now}'. The profile is set; it is simply "
-                    f"not observable through this call (D-9)"
-                )
-            else:
-                self.logger.warning(
-                    f"Spec-mode sync: controller still reports '{now}' (wanted '{esdf_prof}') — "
-                    f"the run will proceed with what the controller reports"
-                )
-        except Exception as e:
-            self.logger.warning(f"Spec-mode sync skipped ({e}); run proceeds as before")
 
     def set_project(self, project_name: str = None, esdf: str = None,
                     test_cases: List[str] = None):
@@ -446,32 +388,9 @@ class ProjectManager:
                 return [message]
             self.test_case_manager.last_problem = ""
 
-            # Compliance: the app does NOT set the controller's spec mode from the ESDF, so make
-            # the controller match the selected ESDF's PowerProfile BEFORE the guard reads it —
-            # otherwise a run with e.g. the MPP15 ESDF still executes as whatever the controller
-            # was last set to. No-op when they already match; never fatal.
-            self._sync_spec_mode_to_esdf(directories)
-
-            qi_spec_mode_response = self.api_handler.call_api(ApiName.GET_SELECTED_QI_SPEC_MODE_MPP)
-
-            # Validate power profile based on app name
-            if qi_spec_mode_response and qi_spec_mode_response.get('response', {}).get('success', False):
-                power_profile = qi_spec_mode_response['response']['data'].get('powerProfile')
-                self.logger.info(f"Retrieved power profile: {power_profile}")
-
-                ok, allowed = self._profile_guard_ok(self.config_manager.app_name, power_profile)
-                if not ok:
-                    error_msg = (f"Controller is wrong. Expecting powerProfile in "
-                                 f"{sorted(allowed)}, but got: {power_profile}")
-                    self.logger.error(error_msg)
-                    return []
-                if allowed is not None:
-                    self.logger.info(
-                        f"Power profile validation passed: {power_profile} in {sorted(allowed)}"
-                    )
-            else:
-                self.logger.error("Failed to retrieve QI spec mode response or response was unsuccessful")
-                return []
+            # The profile and Qi version are set on the application, checked against the licence
+            # and against what this application can run, inside create_project - per description
+            # file, so a folder of files is checked file by file. See _check_request.
 
             # Check if multiple ESDF files processing is enabled
             if not getattr(self.config_manager, 'is_multiple_esdf_files', False):

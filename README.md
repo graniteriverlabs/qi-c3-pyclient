@@ -48,7 +48,7 @@ the same in both versions, so the [Quickstart](#quickstart) steps are the same t
 | Part | What is in it |
 |---|---|
 | **[Getting started](#getting-started)** | [Requirements](#requirements) · [Bench setup](#bench-setup) · [Install](#install) · [Quickstart](#quickstart) — a bench from nothing to a finished run · [From a Mac or another PC](#from-a-mac-or-another-pc) |
-| **[Running tests](#running-tests)** | [Commands](#commands) · [Where your results are](#where-your-results-are) · [more than one application](#working-with-more-than-one-application) · [Opening and closing the application](#opening-and-closing-the-application) · [API mode](#api-mode) |
+| **[Running tests](#running-tests)** | [Commands](#commands) · [Where your results are](#where-your-results-are) · [more than one application](#working-with-more-than-one-application) · [Opening and closing the application](#opening-and-closing-the-application) · [API mode](#api-mode) · [Licence check](#licence-check) |
 | **[Exerciser sessions](#exerciser-sessions)** | driving the emulator directly instead of running test cases |
 | **[The Python API](#the-python-api)** | the same steps as library calls, for your own scripts |
 | **[Keeping it current](#keeping-it-current)** | [Upgrading](#upgrading) · [The workspace](#the-workspace) |
@@ -212,7 +212,8 @@ c3-testcases
 ```
 
 The applicable cases depend on the description file, so this loads it first. **No tests are run.**
-The full list is written to:
+Fetching the list goes through the same licence check as a run — see
+[Licence check](#licence-check). The full list is written to:
 
 ```
 Test_Case_List_From_System\<application>\Received_test_cases.json
@@ -512,6 +513,28 @@ PC or from a Mac.
 There is nothing to configure: the client switches to API mode when a command starts, and back to
 UI mode when it ends. Only one client can be in control at a time. If a test is already running
 from the window, the client starts nothing and says the application is busy.
+
+### Licence check
+
+*1.1.0 (beta).* Before a project is created or an exerciser session starts, the client checks
+that the tester is licensed for exactly what the run asks for:
+
+| Run | Asks for |
+|---|---|
+| `c3-run`, `c3-testcases`, `run_compliance()` | the description file's power profile at its Qi version (`SpecificationSupported`) |
+| `c3-exerciser`, `run_exerciser()` | the sequence file's power profile at its Qi version |
+
+The client puts that profile and version on the application, then goes ahead only when all of
+these hold:
+
+1. the tester has an active licence for that profile at that Qi version;
+2. the application can run that profile;
+3. the application reports that profile and version when they are read back.
+
+Anything that cannot be established — no licence list, no profile, no version, a setting the
+application does not take — stops the run before anything starts, and says why. A file that
+states no Qi version uses the application's current one, and the log says so. On MPP-TPR, an MPP
+licence also covers BPP, EPP and EPP5.
 
 ## Exerciser sessions
 
@@ -899,6 +922,12 @@ cannot shut it down.
 **`Controller is wrong. Expecting powerProfile in ...`**
 The tester's firmware does not support the profile in the description file. The BPP/EPP firmware
 exposes only its own profiles, whatever description file is selected.
+
+**`Licence check FAILED - the project was not created`**
+The tester is not licensed for what the run asks for. The message gives the profile and Qi
+version asked for, the file they came from, and every licence the tester has. Nothing was started.
+Use a description file (or exerciser sequence) for a profile and version on that list, or have
+the licence added — see [Licence check](#licence-check).
 
 **A case I asked for did not run, or the run found zero cases**
 Case names must match what the description file makes applicable, and the applicable set differs

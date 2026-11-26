@@ -28,6 +28,13 @@ than 1.0.0 and less used. Settings and messages may still change before it is ma
   a run on the bench PC.
 - **The client no longer clicks the application's window**, and `pywinauto` is no longer
   installed.
+- **The licence is checked for exactly what the run asks for.** A compliance run, and fetching
+  its test cases, ask for the description file's power profile at its Qi version
+  (`SpecificationSupported`); an exerciser session asks for its sequence file's. The client puts
+  that profile and version on the application, reads them back, and goes ahead only when the
+  tester has a licence for them. Anything that cannot be established - no licence list, no
+  profile, no version, a setting the application does not take - stops the run before anything
+  starts.
 - `c3-init` checks `app_path` only for an application the client opens itself.
 
 ## 1.0.0 (stable)

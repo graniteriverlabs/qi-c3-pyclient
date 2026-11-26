@@ -760,29 +760,24 @@ class ExerciserManager:
 
     # -- license gate ------------------------------------------------------
     def apply_license(self, connection_info: Any, profile: Any = None,
-                      spec: Any = None) -> Dict[str, Any]:
+                      spec: Any = None, source: Any = None) -> Dict[str, Any]:
         """
-        Evaluate the exerciser license gate from an ALREADY-FETCHED ConnectionSetup response
-        (the client caches it at connect time — no redundant call). Caches the verdict on the
-        manager. This is the preferred path; `check_license` is a fallback that re-fetches.
+        Evaluate the exerciser licence from an ALREADY-FETCHED ConnectionSetup response (the
+        client caches it at connect time — no redundant call). Caches the verdict on the manager.
 
-        When the caller knows which power profile the session will drive and which Qi
-        specification version the controller is set to, the decision is made against THOSE —
-        the same question compliance asks — rather than against a fixed "any 2.3 module".
-        A controller at spec 2.2 needs a 2.2 licence for the profile it is driving; one at 2.3
-        needs a 2.3 licence. Without that context the older rule still applies, so nothing that
-        does not pass the information behaves differently.
+        The decision is the one compliance uses (`client.core.license_gate`): the power profile
+        the session drives at the Qi version it asks for - the sequence file's - against the
+        modules the tester reports. Fail-closed: without a profile and a version there is nothing
+        to match, and that is a refusal. (An earlier fallback licensed any session when an active
+        "2.3" module existed; it allowed a request nobody had checked, and is gone.)
         """
-        if profile or spec:
-            from client.core import license_gate
-            verdict = license_gate.evaluate(
-                connection_info, profile=profile, spec=spec,
-                app_name=getattr(self.config_manager, "app_name", None))
-            gate = {"licensed": verdict["allowed"], "reason": verdict["reason"],
-                    "modules": verdict["covering"], "seen": license_gate.parse_modules(
-                        connection_info), "flag": None, "shape": ""}
-        else:
-            gate = evaluate_exerciser_license(connection_info)
+        from client.core import license_gate
+        verdict = license_gate.evaluate(
+            connection_info, profile=profile, spec=spec,
+            app_name=getattr(self.config_manager, "app_name", None), source=source)
+        gate = {"licensed": verdict["allowed"], "reason": verdict["reason"],
+                "modules": verdict["covering"], "seen": license_gate.parse_modules(
+                    connection_info), "flag": None, "shape": ""}
         self._licensed = gate["licensed"]
         self._license_reason = gate["reason"]
         lvl = self.logger.info if gate["licensed"] else self.logger.warning

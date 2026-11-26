@@ -390,7 +390,9 @@ under its earlier name, and takes the same arguments.
 | `["Test Execution completed"]` | every selected case reached a verdict |
 | `["Test Execution INCOMPLETE: N of M selected case(s) never reached a verdict"]` | the application stopped early; the cases that never finished are named in the log |
 | `["Test Execution STOPPED: control was taken back at the bench (UI mode was selected in the application window) - N of M selected case(s) never reached a verdict"]` | someone selected UI mode in the window during the run; the running test was stopped and the application left open |
-| `["Test Execution did not start: no project was created. ..."]` | refused before anything ran — the description file could not be verified, its power profile could not be read, or the licence does not cover the profile. The reason is logged |
+| `["Test Execution did not start: licence check failed - ..."]` | the tester is not licensed for the profile at the Qi version the description file asks for. Nothing was created |
+| `["Test Execution did not start: ..."]` | refused before anything ran for another reason — the profile or Qi version could not be established, the application did not take them, or it cannot run that profile. The reason follows |
+| `["Test Execution did not start: no project was created. ..."]` | refused before anything ran — the description file could not be verified. The reason is logged |
 | `["Test Execution did not start: none of the N selected test case(s) is allowed by ..."]` | no selected name is a case the description file allows |
 | `["No test cases selected for ..."]` | the selection was empty. Nothing was sent to the application |
 | `["The test case selection for ... cannot be used ..."]` | the selection could not be read. Nothing was sent |
@@ -419,6 +421,14 @@ application or the controller.
 A description file supplied here is applied for this run only and put back afterwards; your
 configuration file is not rewritten.
 
+**The licence is checked for what the description file asks for:** its `PowerProfile` at its
+`SpecificationSupported` Qi version. Before the project is created, that profile and version are
+put on the application and read back, and the run goes ahead only when the tester reports an
+active licence for them and the application reports them. Anything that cannot be established —
+no licence list, no profile, no version, a setting the application does not take — refuses the
+run, and nothing is created. A description file that states no version uses the application's
+current one, and the log says so. Fetching the test cases goes through the same check.
+
 With `is_multiple_esdf_files` set, the run repeats once per description file in the `esdf` folder,
 each with `Manual_test_cases.json`. Passing `esdf` or `test_cases` then is refused rather than
 ignored.
@@ -440,6 +450,12 @@ compliance cases.
 `exerciser\` folder, so a session runs without exporting anything first. Pass one by name, or leave
 `sequence_file` as `None` to use the one named in the configuration. A bare file name is looked for
 in `exerciser\` too.
+
+**The licence is checked for what the sequence asks for:** its `PowerProfile` at its
+`QiSpecification` version, the same way as for a compliance run. That profile and version are put
+on the application and read back before anything else is sent; on a dry run they are checked and
+nothing is written. A sequence that names no profile (the C3-TPR export) uses the application's
+current one, and the log says so.
 
 To use a setup of your own, build it in the application's UI, export it, put the file in
 `JSON_User_input\<application>\exerciser\` and pass or configure its name. Nothing is hand-typed
@@ -657,6 +673,11 @@ cannot shut it down.
 **`Controller is wrong. Expecting powerProfile in ...`**
 The tester's firmware does not support the profile in the description file. The BPP/EPP firmware
 exposes only its own profiles, whatever description file is selected.
+
+**`Licence check FAILED - the project was not created`**, **`Exerciser mode blocked`**
+The tester is not licensed for what the run asks for. The message gives the profile and Qi version
+asked for, the file they came from, and every licence the tester has. Use a description file or
+sequence for a profile and version on that list, or have the licence added. Nothing was started.
 
 **A case I asked for did not run**, **`Test Execution did not start: none of the ... selected test case(s) is allowed by ...`**
 Names must match what the description file makes applicable. Unmatched names are named in the log.
